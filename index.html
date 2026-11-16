@@ -129,8 +129,8 @@ button:focus-visible{outline:5px solid var(--ink);outline-offset:4px}
 .reward{font-size:min(7.5vh,9vw);line-height:1.1;font-weight:800;display:flex;align-items:center;gap:.3em;visibility:hidden;background:var(--card);border-radius:.5em;padding:.1em .5em;box-shadow:0 4px 0 rgba(29,36,64,.12)}
 .reward.show{visibility:visible;animation:pop .4s cubic-bezier(.3,1.6,.5,1)}
 
-.wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2vh;width:100%}
-.strip{display:grid;gap:3px;justify-content:center}
+.wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5.5vh;width:100%}
+.strip{display:grid;gap:8px 6px;justify-content:center}
 .chip{height:var(--ch);padding:0;border-radius:8px;background:rgba(255,255,255,.8);color:var(--ink);font-weight:800;font-size:calc(var(--ch)*.48);line-height:1}
 .chip.cur{background:var(--sun);box-shadow:0 3px 0 var(--sun-dark)}
 .count.many .numeral{font-size:min(17vh,24vw)}
@@ -449,8 +449,8 @@ function clearTimers(){ clearTimeout(nudgeTimer); }
 function cap2(n){ return cap(WORDS[n]); }
 /* row of small chips under the card so a grown-up can jump to any letter or number */
 function stripHTML(count, cur, label, aria){
-  var W = stage.clientWidth, gap = 3;
-  var cols = W >= count * 30 ? count : Math.ceil(count / 2);
+  var W = stage.clientWidth, gap = 6;
+  var cols = W >= count * 34 ? count : Math.ceil(count / 2);
   var cw = Math.max(18, Math.min(44, Math.floor((W - (cols - 1) * gap) / cols)));
   var ch = Math.max(30, Math.min(42, cw + 6));
   var h = '<div class="strip" style="--ch:' + ch + 'px;grid-template-columns:repeat(' + cols + ',' + cw + 'px)">';
