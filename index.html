@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>MyMan's ABC and 123</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* One-screen toddler game: guide spider on top, one giant tap target in the middle. Single daytime theme by choice. */
+  color-scheme: light;
+  --sky-top:#5fbdf7;
+  --sky-bot:#dff5ff;
+  --ink:#1d2440;
+  --hero:#19b5a5;
+  --hero-dark:#0b7d77;
+  --cape:#ff8a3d;
+  --sun:#ffd23f;
+  --sun-dark:#e0a800;
+  --berry:#ff5d8f;
+  --berry-dark:#d63a6d;
+  --card:#ffffff;
+  --font: "Baloo 2", "Arial Rounded MT Bold", "Trebuchet MS", system-ui, sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0}
+body{
+  background:linear-gradient(var(--sky-top),var(--sky-bot));
+  color:var(--ink);font-family:var(--font);font-weight:600;
+  overflow:hidden;touch-action:manipulation;
+  -webkit-user-select:none;user-select:none;
+}
+button{font:inherit;color:inherit;border:0;cursor:pointer;touch-action:manipulation}
+button:focus-visible{outline:5px solid var(--ink);outline-offset:4px}
+
+#app{position:relative;height:100%;display:flex;flex-direction:column;padding:12px 16px 16px;gap:8px}
+.scenery{position:absolute;inset:0;pointer-events:none;z-index:0}
+.scenery svg{position:absolute}
+.skyline{left:0;bottom:0;width:100%;height:26%}
+.web{right:0;top:0;width:min(34vmin,220px);height:min(34vmin,220px)}
+
+/* top controls (for grown-ups) */
+.bar{position:relative;z-index:2;display:flex;justify-content:space-between;min-height:44px}
+.bar button{width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.75);display:grid;place-items:center}
+.bar svg{width:24px;height:24px}
+.bar [hidden]{display:none}
+
+/* guide */
+.guide{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:12px}
+#perch{flex:none;width:clamp(84px,20vmin,170px);aspect-ratio:200/215}
+#hero{position:absolute;left:0;top:0;z-index:4;width:clamp(84px,20vmin,170px);pointer-events:none;transition:transform 0ms;will-change:transform}
+#hero .inner{animation:bob 2.6s ease-in-out infinite}
+#hero svg{position:relative;display:block;width:100%;height:auto}
+#hero.cheer .inner{animation:cheer .6s ease-in-out 3}
+.talking .mouth{animation:chat .22s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:center}
+#bubble{
+  position:relative;background:var(--card);border-radius:22px;padding:10px 16px;
+  font-size:clamp(16px,2.7vmin,24px);line-height:1.25;max-width:32ch;
+  box-shadow:0 4px 0 rgba(29,36,64,.12);text-wrap:balance;
+}
+#bubble::before{content:"";position:absolute;left:-10px;top:50%;margin-top:-10px;border:10px solid transparent;border-right-color:var(--card);border-left:0}
+
+/* stage */
+#stage{position:relative;z-index:1;flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+.pop{animation:pop .35s cubic-bezier(.3,1.6,.5,1)}
+.nudge{animation:wiggle .5s ease-in-out 3}
+.leaving{animation:leave .4s ease-in forwards}
+.carried{animation:carry .75s cubic-bezier(.2,.8,.3,1) backwards}
+
+/* start + home */
+.menu{display:flex;flex-wrap:wrap;gap:min(5vmin,32px);justify-content:center;align-items:center}
+.tile{
+  font-weight:800;line-height:1;border-radius:.22em;padding:.28em .4em .2em;
+  font-size:min(17vh,19vw);box-shadow:0 .08em 0 var(--shade);background:var(--fill);
+}
+.tile:active,.big:active,.friend:active{transform:translateY(.04em) scale(.97)}
+.tile.abc{--fill:var(--sun);--shade:var(--sun-dark)}
+.tile.num{--fill:var(--berry);--shade:var(--berry-dark);color:#fff}
+.tile.play{--fill:var(--hero);--shade:var(--hero-dark);color:#fff;display:flex;align-items:center;gap:.25em;font-size:min(13vh,15vw)}
+.tile.play svg{width:.8em;height:.8em}
+.menu{max-width:min(96vw,900px)}
+.menu .tile{font-size:min(11vh,13vw);min-width:2.3em;display:grid;place-items:center}
+.tile svg{display:block;width:1.7em;height:1em}
+.tile.bub3{--fill:#3fa7ff;--shade:#1b74c9;color:#fff}
+.tile.brd{--fill:#4fca6a;--shade:#2a9645;color:#fff}
+.tile.fnd{--fill:#8e6bff;--shade:#5b3fd1;color:#fff}
+.start{display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center}
+.start p{margin:0;font-size:clamp(15px,2.4vmin,20px);max-width:34ch;background:rgba(255,255,255,.7);padding:8px 14px;border-radius:14px}
+
+/* lessons */
+.lesson{display:flex;align-items:center;justify-content:center;gap:min(4vw,28px);width:100%}
+.nav{flex:none;width:clamp(48px,11vmin,84px);height:clamp(48px,11vmin,84px);border-radius:50%;background:rgba(255,255,255,.85);display:grid;place-items:center}
+.nav svg{width:50%;height:50%}
+.center{display:flex;flex-direction:column;align-items:center;gap:4vh}
+.big{
+  font-weight:800;line-height:1;font-size:min(32vh,40vw);
+  background:var(--sun);box-shadow:0 .07em 0 var(--sun-dark);
+  border-radius:.16em;padding:.1em .28em .02em;display:flex;align-items:baseline;gap:.12em;
+}
+.big .lo{font-size:.55em;opacity:.75}
+.reward{font-size:min(7.5vh,9vw);line-height:1.1;font-weight:800;display:flex;align-items:center;gap:.3em;visibility:hidden;background:var(--card);border-radius:.5em;padding:.1em .5em;box-shadow:0 4px 0 rgba(29,36,64,.12)}
+.reward.show{visibility:visible;animation:pop .4s cubic-bezier(.3,1.6,.5,1)}
+
+.count{display:flex;flex-direction:column;align-items:center;gap:2.5vh}
+.numeral{
+  font-weight:800;line-height:1;font-size:min(24vh,30vw);color:#fff;
+  background:var(--berry);box-shadow:0 .07em 0 var(--berry-dark);
+  border-radius:.16em;padding:.1em .3em .02em;min-width:1.3em;text-align:center;
+}
+.friends{--s:min(13vh,15vw);display:flex;flex-wrap:wrap;justify-content:center;gap:calc(var(--s)*.12);max-width:calc(var(--s)*5.6)}
+.friend{position:relative;width:var(--s);height:var(--s);padding:0;background:rgba(255,255,255,.55);border-radius:50%;animation:bob 2.2s ease-in-out infinite}
+.friend:nth-child(even){animation-delay:-1.1s}
+.friend svg{width:100%;height:100%;display:block}
+.friend.caught{background:var(--sun);animation:pop .4s cubic-bezier(.3,1.6,.5,1)}
+.friend b{position:absolute;right:-6%;top:-6%;width:42%;height:42%;border-radius:50%;background:var(--ink);color:#fff;font-size:calc(var(--s)*.26);display:none;place-items:center;line-height:1}
+.friend.caught b{display:grid}
+@media (orientation:landscape){
+  .count{flex-direction:row;gap:5vw}
+  .friends{--s:min(17vh,9.5vw)}
+}
+
+/* bubble pop */
+.field{position:absolute;inset:0;overflow:hidden;border-radius:24px}
+.bub{position:absolute;left:var(--x);top:100%;width:var(--d);height:var(--d);border-radius:50%;padding:0;
+  background:radial-gradient(circle at 32% 28%,#fff 0 7%,rgba(255,255,255,.6) 8% 20%,var(--c) 72%);
+  box-shadow:inset 0 0 0 3px rgba(255,255,255,.75);
+  font-weight:800;font-size:calc(var(--d)*.56);line-height:1;color:var(--ink);display:grid;place-items:center;
+  animation:rise var(--t) linear forwards}
+.bub.still{top:var(--y);animation:pop .35s cubic-bezier(.3,1.6,.5,1)}
+.ghost{position:absolute;display:grid;place-items:center;font-weight:800;line-height:1;pointer-events:none;animation:ghost .9s ease-out forwards}
+/* letter board */
+.board{display:grid;gap:8px;justify-content:center;align-content:center}
+.cell{position:relative;width:var(--s);height:var(--s);border-radius:22%;padding:0;display:grid;place-items:center;
+  font-weight:800;font-size:calc(var(--s)*.62);line-height:1;color:#fff;background:var(--c);box-shadow:0 calc(var(--s)*.07) 0 rgba(29,36,64,.22)}
+.cell:active{transform:scale(.94)}
+.cell.seen::after{content:"\2605";position:absolute;right:5%;top:3%;font-size:.34em;color:var(--sun)}
+.spot{position:absolute;inset:0;z-index:2;display:grid;place-items:center;background:rgba(223,245,255,.9);border-radius:24px}
+div.big{cursor:default}
+/* find the letter */
+.pair{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:min(5vw,36px)}
+.pair .big{font-size:min(26vh,27vw);padding:.1em .34em .02em}
+.pair.three .big{font-size:min(21vh,18vw)}
+.big.wrong{opacity:.55}
+
+/* celebration stars */
+.star{position:absolute;left:50%;top:45%;z-index:3;pointer-events:none;font-size:clamp(22px,5vmin,44px);color:var(--sun);text-shadow:0 2px 0 var(--sun-dark);animation:fly 1.1s ease-out forwards}
+.star:nth-child(3n){color:var(--berry);text-shadow:none}
+.star:nth-child(3n+1){color:#fff;text-shadow:none}
+
+@keyframes leave{to{transform:translateX(-60vw);opacity:0}}
+@keyframes carry{from{transform:translateX(var(--from))}}
+@keyframes rise{to{transform:translateY(calc(-1 * (var(--h) + var(--d))))}}
+@keyframes ghost{to{transform:scale(2.4);opacity:0}}
+@keyframes bob{50%{transform:translateY(-6%)}}
+@keyframes cheer{50%{transform:translateY(-14%) rotate(8deg)}}
+@keyframes chat{from{transform:scaleY(.5)}to{transform:scaleY(1.5)}}
+@keyframes pop{from{transform:scale(.6)}to{transform:scale(1)}}
+@keyframes wiggle{25%{transform:rotate(-5deg) scale(1.06)}75%{transform:rotate(5deg) scale(1.06)}}
+@keyframes fly{to{transform:translate(var(--dx),var(--dy)) rotate(var(--r));opacity:0}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="scenery" aria-hidden="true">
+    <svg class="skyline" viewBox="0 0 800 200" preserveAspectRatio="xMidYMax slice">
+      <g fill="#ffffff" opacity=".38">
+        <rect x="0" y="90" width="70" height="110"/><rect x="80" y="40" width="60" height="160"/>
+        <rect x="150" y="110" width="80" height="90"/><rect x="240" y="60" width="50" height="140"/>
+        <rect x="300" y="20" width="70" height="180"/><rect x="380" y="100" width="90" height="100"/>
+        <rect x="480" y="50" width="60" height="150"/><rect x="550" y="120" width="70" height="80"/>
+        <rect x="630" y="30" width="60" height="170"/><rect x="700" y="80" width="100" height="120"/>
+      </g>
+      <g fill="#5fbdf7" opacity=".45">
+        <rect x="94" y="56" width="12" height="14"/><rect x="114" y="56" width="12" height="14"/><rect x="94" y="84" width="12" height="14"/><rect x="114" y="84" width="12" height="14"/>
+        <rect x="314" y="38" width="14" height="16"/><rect x="340" y="38" width="14" height="16"/><rect x="314" y="70" width="14" height="16"/><rect x="340" y="70" width="14" height="16"/>
+        <rect x="644" y="48" width="12" height="14"/><rect x="664" y="48" width="12" height="14"/><rect x="644" y="78" width="12" height="14"/><rect x="664" y="78" width="12" height="14"/>
+      </g>
+    </svg>
+    <svg class="web" viewBox="0 0 200 200">
+      <circle cx="150" cy="50" r="62" fill="#fff6c9" opacity=".55"/><circle cx="150" cy="50" r="40" fill="#ffd23f"/>
+      <g fill="#ffffff" opacity=".9"><circle cx="46" cy="150" r="20"/><circle cx="72" cy="140" r="26"/><circle cx="102" cy="152" r="19"/><rect x="40" y="150" width="68" height="20" rx="10"/></g>
+    </svg>
+  </div>
+
+  <div class="bar">
+    <button id="homeBtn" aria-label="Back to the start" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="#1d2440" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M6 10v10h12V10"/></svg>
+    </button>
+  </div>
+
+  <div class="guide">
+    <div id="perch" aria-hidden="true"></div>
+    <div id="bubble" aria-live="polite">Hi! I'm MyMan, your superhero helper.</div>
+  </div>
+
+  <main id="stage"></main>
+  <div id="hero" aria-hidden="true"></div>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+var $ = function(s){ return document.querySelector(s); };
+var stage = $("#stage"), bubble = $("#bubble"), hero = $("#hero");
+var homeBtn = $("#homeBtn");
+
+/* ---------- characters ---------- */
+function spider(body, dark, cape){
+  var legsL = ["M52 78Q22 60 14 84","M46 100Q14 96 10 120","M50 122Q22 132 22 156","M62 140Q44 158 50 178"];
+  var legsR = ["M148 78Q178 60 186 84","M154 100Q186 96 190 120","M150 122Q178 132 178 156","M138 140Q156 158 150 178"];
+  return '<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">' +
+    (cape ? '<path d="M62 92Q26 150 44 194Q100 172 156 194Q174 150 138 92Z" fill="' + cape + '"/>' : '') +
+    '<g fill="none" stroke="' + dark + '" stroke-width="11" stroke-linecap="round">' +
+      legsL.concat(legsR).map(function(d){ return '<path d="' + d + '"/>'; }).join("") + '</g>' +
+    '<circle cx="100" cy="105" r="60" fill="' + body + '"/>' +
+    '<ellipse cx="100" cy="134" rx="34" ry="22" fill="#fff" opacity=".25"/>' +
+    '<circle cx="78" cy="92" r="19" fill="#fff"/><circle cx="122" cy="92" r="19" fill="#fff"/>' +
+    '<circle cx="81" cy="95" r="9.5" fill="#1d2440"/><circle cx="125" cy="95" r="9.5" fill="#1d2440"/>' +
+    '<circle cx="84.5" cy="91" r="3.2" fill="#fff"/><circle cx="128.500" cy="91" r="3.2" fill="#fff"/>' +
+    '<circle cx="60" cy="118" r="8" fill="#ff9db0" opacity=".85"/><circle cx="140" cy="118" r="8" fill="#ff9db0" opacity=".85"/>' +
+    '<path class="mouth" d="M84 122Q100 141 116 122" fill="none" stroke="#1d2440" stroke-width="5.5" stroke-linecap="round"/>' +
+  '</svg>';
+}
+function myman(){
+  var suit = "#e8384f", accent = "#2f6fe0", skin = "#f2b98a", ink = "#1d2440";
+  return '<svg viewBox="0 0 200 215" xmlns="http://www.w3.org/2000/svg">' +
+    '<g fill="none" stroke-linecap="round">' +
+      '<path d="M88 150V190" stroke="' + suit + '" stroke-width="19"/><path d="M114 150V190" stroke="' + suit + '" stroke-width="19"/>' +
+      '<path d="M88 192V198" stroke="' + accent + '" stroke-width="21"/><path d="M114 192V198" stroke="' + accent + '" stroke-width="21"/>' +
+      '<path d="M68 116Q48 128 50 150" stroke="' + suit + '" stroke-width="16"/>' +
+      '<path d="M134 114Q156 108 164 84" stroke="' + suit + '" stroke-width="16"/>' +
+    '</g>' +
+    '<circle cx="50" cy="152" r="11" fill="' + accent + '"/><circle cx="165" cy="80" r="12" fill="' + accent + '"/>' +
+    '<path d="M60 104Q100 94 140 104Q142 112 124 156H78Q58 112 60 104Z" fill="' + suit + '"/>' +
+    '<text x="100" y="131" text-anchor="middle" font-family="Baloo 2, Arial Rounded MT Bold, sans-serif" font-weight="800" font-size="18" fill="#fff">MyMan</text>' +
+    '<circle cx="57" cy="64" r="8" fill="' + skin + '"/><circle cx="143" cy="64" r="8" fill="' + skin + '"/>' +
+    '<circle cx="100" cy="60" r="44" fill="' + skin + '"/>' +
+    '<path d="M57 52Q60 14 102 14Q142 16 143 52Q128 32 104 36Q92 46 74 38Q64 42 57 52Z" fill="#5a3825"/>' +
+    '<path d="M56 60Q100 47 144 60Q144 75 122 77Q100 69 78 77Q56 75 56 60Z" fill="' + accent + '"/>' +
+    '<ellipse cx="83" cy="63" rx="10" ry="11" fill="#fff"/><ellipse cx="117" cy="63" rx="10" ry="11" fill="#fff"/>' +
+    '<ellipse cx="83" cy="64" rx="6.5" ry="8.5" fill="' + ink + '"/><ellipse cx="117" cy="64" rx="6.5" ry="8.5" fill="' + ink + '"/>' +
+    '<circle cx="85.500" cy="60.500" r="2.600" fill="#fff"/><circle cx="119.500" cy="60.500" r="2.600" fill="#fff"/>' +
+    '<circle cx="70" cy="84" r="6" fill="#ff9db0" opacity=".8"/><circle cx="130" cy="84" r="6" fill="#ff9db0" opacity=".8"/>' +
+    '<path class="mouth" d="M88 80Q100 93 112 80" fill="none" stroke="' + ink + '" stroke-width="5" stroke-linecap="round"/>' +
+  '</svg>';
+}
+hero.innerHTML = '<div class="inner">' + myman() + '</div>';
+var FRIENDS = [["#8e6bff","#5b3fd1"],["#ff8a3d","#cf6212"],["#3fa7ff","#1b74c9"],["#ff5d8f","#d63a6d"],["#4fca6a","#2a9645"]];
+
+/* ---------- lessons ---------- */
+var LETTERS = [
+  ["A","apple","🍎"],["B","ball","⚽"],["C","cat","🐱"],["D","dog","🐶"],["E","elephant","🐘"],
+  ["F","fish","🐟"],["G","grapes","🍇"],["H","hat","🎩"],["I","ice cream","🍦"],["J","juice","🧃"],
+  ["K","kite","🪁"],["L","lion","🦁"],["M","moon","🌙"],["N","nose","👃"],["O","octopus","🐙"],
+  ["P","pizza","🍕"],["Q","queen","👸"],["R","rainbow","🌈"],["S","sun","☀️"],["T","turtle","🐢"],
+  ["U","umbrella","☂️"],["V","van","🚐"],["W","whale","🐳"],["X","fox","🦊"],["Y","yo-yo","🪀"],["Z","zebra","🦓"]
+];
+var WORDS = ["zero","one","two","three","four","five","six","seven","eight","nine","ten"];
+var PRAISE = ["Great job!","You did it!","Super!","Wow, amazing!","Way to go!","Hooray!"];
+function praiseIdx(){ return Math.floor(Math.random()*PRAISE.length); }
+function cap(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
+
+/* ---------- MyMan's voice (recorded clips in audio/) ---------- */
+var clipCache = {}, clipOrder = [], voiceSrc = null, voiceToken = 0;
+function loadClip(id){
+  if(clipCache[id]) return clipCache[id];
+  var p = fetch("audio/" + id + ".mp3")
+    .then(function(r){ if(!r.ok) throw new Error("missing clip"); return r.arrayBuffer(); })
+    .then(function(b){ return new Promise(function(res, rej){ ac.decodeAudioData(b, res, rej); }); });
+  clipCache[id] = p; clipOrder.push(id);
+  if(clipOrder.length > 40) delete clipCache[clipOrder.shift()];
+  p.catch(function(){ delete clipCache[id]; });
+  return p;
+}
+function preload(ids){ if(!ac) return; ids.forEach(function(id){ try{ loadClip(id).catch(function(){}); }catch(e){} }); }
+function stopVoice(){
+  voiceToken++;
+  if(voiceSrc){ try{ voiceSrc.onended = null; voiceSrc.stop(); }catch(e){} voiceSrc = null; }
+}
+function playClips(ids, done){
+  stopVoice();
+  var my = voiceToken, i = 0;
+  (function next(){
+    if(my !== voiceToken) return;
+    if(i >= ids.length){ done(); return; }
+    var id = ids[i++];
+    loadClip(id).then(function(buf){
+      if(my !== voiceToken) return;
+      var src = ac.createBufferSource();
+      src.buffer = buf; src.connect(ac.destination);
+      src.onended = function(){ if(my === voiceToken){ voiceSrc = null; setTimeout(next, 120); } };
+      voiceSrc = src; src.start();
+    }).catch(function(){ if(my === voiceToken) setTimeout(next, 900); });
+  })();
+}
+var sayToken = 0, sayTimer = 0;
+function say(text, after, clips){
+  bubble.textContent = text;
+  var token = ++sayToken, fired = false;
+  clearTimeout(sayTimer);
+  function finish(){
+    if(fired || token !== sayToken) return;
+    fired = true; hero.classList.remove("talking");
+    if(after) after();
+  }
+  hero.classList.add("talking");
+  if(clips && clips.length && ac){
+    playClips(clips, function(){ setTimeout(finish, 250); });
+    sayTimer = setTimeout(finish, 12000);   // safety net if audio never finishes
+  } else {
+    stopVoice();
+    sayTimer = setTimeout(finish, Math.min(text.length * 45 + 900, 3200));
+  }
+}
+
+/* ---------- sound effects ---------- */
+var ac = null;
+function initAudio(){
+  try{ var C = window.AudioContext || window.webkitAudioContext; if(C && !ac) ac = new C(); if(ac && ac.state === "suspended") ac.resume(); }catch(e){}
+}
+function tone(freq, delay, dur){
+  if(!ac) return;
+  try{
+    var o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime + delay;
+    o.type = "triangle"; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.07, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + dur + 0.05);
+  }catch(e){}
+}
+function popSound(step){ tone(440 * Math.pow(1.122, step || 0), 0, 0.16); }
+function winSound(){ [523,659,784,1047].forEach(function(f,i){ tone(f, i*0.1, 0.25); }); }
+
+/* ---------- helpers ---------- */
+var app = $("#app");
+var mode = "start", li = 0, ni = 1, counted = 0, lastPrompt = "", lastClips = null, nudges = 0, nudgeTimer = 0;
+var scene = 0, hx = 0, hy = 0, tiltTimer = 0;
+var EASE_FLY = "cubic-bezier(.45,.05,.3,1)", EASE_CARRY = "cubic-bezier(.2,.8,.3,1)";
+function later(ms, fn){ var my = scene; return setTimeout(function(){ if(my === scene) fn(); }, ms); }
+function clearTimers(){ clearTimeout(nudgeTimer); }
+function cap2(n){ return cap(WORDS[n]); }
+
+/* ---------- MyMan flies around ---------- */
+function rectIn(el){
+  var a = app.getBoundingClientRect(), r = el.getBoundingClientRect();
+  return { x: r.left - a.left, y: r.top - a.top, w: r.width, h: r.height };
+}
+function place(x, y, ms, tilt, ease){
+  hero.style.transitionDuration = (ms || 0) + "ms";
+  hero.style.transitionTimingFunction = ease || EASE_FLY;
+  hero.style.transform = "translate(" + x + "px," + y + "px) rotate(" + (tilt || 0) + "deg)";
+  hx = x; hy = y;
+}
+function flyTo(x, y, ms, ease){
+  var tilt = x > hx + 6 ? 10 : (x < hx - 6 ? -10 : 0);
+  place(x, y, ms, tilt, ease);
+  clearTimeout(tiltTimer);
+  tiltTimer = setTimeout(function(){ place(x, y, 160, 0); }, ms);
+}
+function perch(ms){ var r = rectIn($("#perch")); flyTo(r.x, r.y, ms == null ? 500 : ms); }
+function flyBeside(el, ms){
+  var r = rectIn(el), w = hero.offsetWidth, h = hero.offsetHeight;
+  flyTo(Math.max(0, r.x - w * 0.6), Math.max(0, r.y + r.h / 2 - h / 2), ms || 600);
+}
+/* MyMan zooms off, then flies back in carrying the next card */
+function bring(build, after){
+  scene++; clearTimers();
+  var old = stage.firstElementChild;
+  if(old) old.classList.add("leaving");
+  var a = app.getBoundingClientRect();
+  flyTo(a.width + 30, a.height * 0.45, 420);
+  later(440, function(){
+    build();
+    var card = stage.querySelector("[data-carry]");
+    var r = rectIn(card), w = hero.offsetWidth, h = hero.offsetHeight;
+    var dist = a.width - r.x + 30;
+    var gx = r.x - w * 0.55, gy = Math.max(0, r.y + r.h / 2 - h / 2);
+    card.style.setProperty("--from", dist + "px");
+    card.classList.add("carried");
+    place(gx + dist, gy, 0, 0);
+    void hero.offsetWidth;
+    place(gx, gy, 750, -8, EASE_CARRY);
+    later(900, function(){ perch(450); });
+    later(1300, after);
+  });
+}
+
+function armNudge(){
+  clearTimeout(nudgeTimer);
+  if(nudges >= 8) return;
+  nudgeTimer = setTimeout(function(){
+    nudges++;
+    say(lastPrompt, null, lastClips);
+    var els = stage.querySelectorAll("[data-target]:not(.caught)");
+    for(var i=0;i<els.length;i++){ els[i].classList.remove("nudge"); void els[i].offsetWidth; els[i].classList.add("nudge"); }
+    if(els.length){
+      // MyMan flies over to show what to tap, then goes back to his spot
+      flyBeside(mode === "home" ? els[(nudges - 1) % els.length] : els[0], 600);
+      later(2000, function(){ perch(500); });
+    }
+    armNudge();
+  }, 9000);
+}
+function prompt(text, clips){ lastPrompt = text; lastClips = clips || null; nudges = 0; say(text, null, clips); armNudge(); }
+function celebrate(){
+  winSound();
+  var card = stage.querySelector("[data-carry]");
+  if(card){
+    var r = rectIn(card), w = hero.offsetWidth, h = hero.offsetHeight;
+    flyTo(r.x + r.w / 2 - w / 2, Math.max(0, r.y - h * 0.8), 450);
+  }
+  hero.classList.remove("cheer"); void hero.offsetWidth; hero.classList.add("cheer");
+  for(var i=0;i<16;i++){
+    var s = document.createElement("span");
+    s.className = "star"; s.textContent = "★";
+    var a = Math.random()*Math.PI*2, d = 22 + Math.random()*26;
+    s.style.setProperty("--dx", Math.cos(a)*d + "vmin");
+    s.style.setProperty("--dy", Math.sin(a)*d + "vmin");
+    s.style.setProperty("--r", (Math.random()*540-270) + "deg");
+    stage.appendChild(s);
+    (function(el){ setTimeout(function(){ el.remove(); }, 1200); })(s);
+  }
+}
+var ARROW_L = '<svg viewBox="0 0 24 24" fill="none" stroke="#1d2440" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
+var ARROW_R = '<svg viewBox="0 0 24 24" fill="none" stroke="#1d2440" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>';
+
+/* ---------- screens ---------- */
+function startScreen(){
+  scene++; clearTimers();
+  mode = "start"; homeBtn.hidden = true;
+  stage.innerHTML = '<div class="start">' +
+    '<button class="tile play" id="playBtn" data-target><svg viewBox="0 0 24 24" fill="#fff"><path d="M6 3.5v17a1 1 0 001.5.86l14-8.5a1 1 0 000-1.72l-14-8.500A1 1 0 006 3.500z"/></svg>Play</button>' +
+    '<p>Grown-ups: turn the sound on. MyMan talks and flies over to show what to tap.</p></div>';
+  $("#playBtn").onclick = function(){ initAudio(); popSound(0); home(); };
+  perch(0);
+}
+
+var ICON_BUBBLES = '<svg viewBox="0 0 51 30" fill="rgba(255,255,255,.92)"><circle cx="13" cy="18" r="10"/><circle cx="31" cy="10" r="8"/><circle cx="42" cy="22" r="6.5"/></svg>';
+var ICON_BOARD = '<svg viewBox="0 0 51 30" fill="rgba(255,255,255,.92)"><rect x="6" y="1" width="11" height="12" rx="3"/><rect x="20" y="1" width="11" height="12" rx="3"/><rect x="34" y="1" width="11" height="12" rx="3"/><rect x="6" y="17" width="11" height="12" rx="3"/><rect x="20" y="17" width="11" height="12" rx="3"/><rect x="34" y="17" width="11" height="12" rx="3"/></svg>';
+function home(){
+  scene++; clearTimers();
+  mode = "home"; homeBtn.hidden = true;
+  stage.innerHTML = '<div class="menu">' +
+    '<button class="tile abc pop" id="abcBtn" data-target aria-label="Learn letters">ABC</button>' +
+    '<button class="tile num pop" id="numBtn" data-target aria-label="Count numbers">123</button>' +
+    '<button class="tile bub3 pop" id="bubBtn" data-target aria-label="Pop bubbles">' + ICON_BUBBLES + '</button>' +
+    '<button class="tile brd pop" id="brdBtn" data-target aria-label="Letter board">' + ICON_BOARD + '</button>' +
+    '<button class="tile fnd pop" id="fndBtn" data-target aria-label="Find the letter">?</button></div>';
+  $("#abcBtn").onclick = function(){ popSound(2); letter(li); };
+  $("#numBtn").onclick = function(){ popSound(4); number(ni); };
+  $("#bubBtn").onclick = function(){ popSound(5); bubbles(); };
+  $("#brdBtn").onclick = function(){ popSound(6); board(); };
+  $("#fndBtn").onclick = function(){ popSound(7); findRound(); };
+  perch(500);
+  prompt("I'm MyMan, let's learn the alphabet and our numbers!", ["home"]);
+}
+
+function letter(i){
+  li = (i + LETTERS.length) % LETTERS.length;
+  mode = "letters"; homeBtn.hidden = false;
+  var L = LETTERS[li], solved = false;
+  bring(function(){
+    stage.innerHTML = '<div class="lesson">' +
+      '<button class="nav" id="prevBtn" aria-label="Previous letter">' + ARROW_L + '</button>' +
+      '<div class="center" data-carry>' +
+        '<button class="big" id="bigBtn" data-target aria-label="Letter ' + L[0] + '"><span>' + L[0] + '</span><span class="lo">' + L[0].toLowerCase() + '</span></button>' +
+        '<div class="reward" id="reward"><span>' + L[2] + '</span><span>' + cap(L[1]) + '</span></div>' +
+      '</div>' +
+      '<button class="nav" id="nextBtn" aria-label="Next letter">' + ARROW_R + '</button></div>';
+    preload(["lp_" + L[0], "lr_" + L[0]]);
+    $("#prevBtn").onclick = function(){ popSound(0); letter(li - 1); };
+    $("#nextBtn").onclick = function(){ popSound(0); letter(li + 1); };
+    $("#bigBtn").onclick = function(){
+      clearTimers();
+      popSound(3);
+      $("#reward").classList.add("show");
+      var line = L[0] === "X" ? "X! Fox ends with X! " : L[0] + "! " + L[0] + " is for " + L[1] + "! ";
+      var clips = ["lr_" + L[0]];
+      if(!solved){ solved = true; celebrate(); var p = praiseIdx(); line += PRAISE[p]; clips.push("praise" + p); }
+      var here = li;
+      say(line, function(){
+        later(600, function(){ if(mode === "letters" && li === here) letter(li + 1); });
+      }, clips);
+    };
+  }, function(){
+    if(!solved) prompt("This is the letter " + L[0] + ". Tap the big " + L[0] + "!", ["lp_" + L[0]]);
+  });
+}
+
+function number(n){
+  ni = n > 10 ? 1 : (n < 1 ? 10 : n);
+  mode = "numbers"; homeBtn.hidden = false;
+  counted = 0;
+  bring(function(){
+    var friends = "";
+    for(var k=0;k<ni;k++){
+      var c = FRIENDS[k % FRIENDS.length];
+      friends += '<button class="friend" data-target aria-label="Spider friend">' + spider(c[0], c[1], null) + '<b></b></button>';
+    }
+    stage.innerHTML = '<div class="lesson">' +
+      '<button class="nav" id="prevBtn" aria-label="Previous number">' + ARROW_L + '</button>' +
+      '<div class="count" data-carry><div class="numeral">' + ni + '</div><div class="friends">' + friends + '</div></div>' +
+      '<button class="nav" id="nextBtn" aria-label="Next number">' + ARROW_R + '</button></div>';
+    var pre = ["np_" + ni, "nf_" + ni]; for(var q=1;q<=ni;q++) pre.push("c_" + q); preload(pre);
+    $("#prevBtn").onclick = function(){ popSound(0); number(ni - 1); };
+    $("#nextBtn").onclick = function(){ popSound(0); number(ni + 1); };
+    var btns = stage.querySelectorAll(".friend");
+    for(var b=0;b<btns.length;b++){
+      btns[b].onclick = function(){
+        if(this.classList.contains("caught")) return;
+        counted++;
+        this.classList.add("caught"); this.querySelector("b").textContent = counted;
+        popSound(counted);
+        var here = ni;
+        if(counted < ni){ lastPrompt = "Keep going! Tap another spider friend!"; lastClips = null; say(cap2(counted) + "!", null, ["c_" + counted]); armNudge(); return; }
+        clearTimers();
+        say(cap2(counted) + "!", function(){
+          if(mode !== "numbers" || ni !== here) return;
+          celebrate();
+          var p = praiseIdx();
+          say(cap2(here) + "! You counted " + WORDS[here] + (here === 1 ? " spider friend! " : " spider friends! ") + PRAISE[p], function(){
+            later(600, function(){ if(mode === "numbers" && ni === here) number(here + 1); });
+          }, ["nf_" + here, "praise" + p]);
+        }, ["c_" + counted]);
+      };
+    }
+  }, function(){
+    if(counted === 0) prompt("This is the number " + WORDS[ni] + ". Tap " + WORDS[ni] + (ni === 1 ? " spider friend!" : " spider friends! Let's count!"), ["np_" + ni]);
+  });
+}
+
+/* ---------- bubble pop: free play, no right or wrong ---------- */
+var BUBBLE_COLORS = ["#9fd8ff","#ffc2d6","#c9b8ff","#b5efc4","#ffe08a","#ffc9a3"];
+var STILL = false;
+try{ STILL = window.matchMedia("(prefers-reduced-motion: reduce)").matches; }catch(e){}
+function miniBurst(x, y){
+  for(var i=0;i<7;i++){
+    var s = document.createElement("span");
+    s.className = "star"; s.textContent = "★";
+    s.style.left = x + "px"; s.style.top = y + "px";
+    var a = Math.random()*Math.PI*2, d = 8 + Math.random()*10;
+    s.style.setProperty("--dx", Math.cos(a)*d + "vmin");
+    s.style.setProperty("--dy", Math.sin(a)*d + "vmin");
+    s.style.setProperty("--r", (Math.random()*360-180) + "deg");
+    stage.appendChild(s);
+    (function(el){ setTimeout(function(){ el.remove(); }, 1200); })(s);
+  }
+}
+function bubbles(){
+  scene++; clearTimers();
+  mode = "bubbles"; homeBtn.hidden = false;
+  stage.innerHTML = '<div class="field" id="field"></div>';
+  var field = $("#field");
+  perch(500);
+  lastPrompt = "Pop the bubbles!"; lastClips = ["bubbles"];
+  say(lastPrompt, null, lastClips);
+  function popBubble(b, ch, clip){
+    var f = field.getBoundingClientRect(), r = b.getBoundingClientRect(), st = stage.getBoundingClientRect();
+    var g = document.createElement("div");
+    g.className = "ghost"; g.textContent = ch;
+    g.style.left = (r.left - f.left) + "px"; g.style.top = (r.top - f.top) + "px";
+    g.style.width = r.width + "px"; g.style.height = r.height + "px"; g.style.fontSize = (r.width * 0.56) + "px";
+    b.remove(); field.appendChild(g);
+    setTimeout(function(){ g.remove(); }, 950);
+    miniBurst(r.left - st.left + r.width / 2, r.top - st.top + r.height / 2);
+    popSound(Math.floor(Math.random() * 8));
+    var a = app.getBoundingClientRect(), w = hero.offsetWidth, h = hero.offsetHeight;
+    flyTo(Math.max(0, Math.min(a.width - w, r.left - a.left - w * 0.75)), Math.max(0, r.top - a.top + r.height / 2 - h / 2), 380);
+    say(ch + "!", null, [clip]);
+  }
+  function spawn(){
+    if(field.querySelectorAll(".bub").length >= 7) return;
+    var isNum = Math.random() < 0.3, ch, clip;
+    if(isNum){ var n = 1 + Math.floor(Math.random() * 10); ch = String(n); clip = "c_" + n; }
+    else { ch = LETTERS[Math.floor(Math.random() * 26)][0]; clip = "ln_" + ch; }
+    preload([clip]);
+    var W = field.clientWidth, H = field.clientHeight;
+    var d = Math.max(76, Math.min(140, Math.min(W, H) * 0.2));
+    var b = document.createElement("button");
+    b.className = "bub" + (STILL ? " still" : ""); b.textContent = ch;
+    b.setAttribute("aria-label", "Bubble " + ch);
+    b.style.setProperty("--d", d + "px");
+    b.style.setProperty("--h", H + "px");
+    b.style.setProperty("--x", Math.random() * Math.max(0, W - d) + "px");
+    b.style.setProperty("--y", Math.random() * Math.max(0, H - d) + "px");
+    b.style.setProperty("--t", (9 + Math.random() * 5) + "s");
+    b.style.setProperty("--c", BUBBLE_COLORS[Math.floor(Math.random() * BUBBLE_COLORS.length)]);
+    b.addEventListener("animationend", function(e){ if(e.animationName === "rise") b.remove(); });
+    if(STILL) setTimeout(function(){ b.remove(); }, 7000);
+    b.addEventListener("pointerdown", function(e){ e.preventDefault(); popBubble(b, ch, clip); });
+    b.addEventListener("click", function(){ if(b.isConnected) popBubble(b, ch, clip); });
+    field.appendChild(b);
+  }
+  (function loop(){ spawn(); later(1150, loop); })();
+}
+
+/* ---------- letter board: tap any letter, any order ---------- */
+var seen = {};
+function board(){
+  mode = "board"; homeBtn.hidden = false;
+  bring(function(){
+    var W = stage.clientWidth, H = stage.clientHeight, g = 8, best = 0, cols = 6;
+    for(var c=4;c<=13;c++){
+      var rows = Math.ceil(26 / c), sz = Math.min((W - g*(c-1)) / c, (H - g*(rows-1)) / rows);
+      if(sz > best){ best = sz; cols = c; }
+    }
+    best = Math.floor(Math.min(best, 132));
+    var cells = "";
+    for(var k=0;k<26;k++){
+      cells += '<button class="cell' + (seen[k] ? " seen" : "") + '" data-i="' + k + '" data-target style="--c:' + FRIENDS[k % FRIENDS.length][0] + '" aria-label="Letter ' + LETTERS[k][0] + '">' + LETTERS[k][0] + '</button>';
+    }
+    stage.innerHTML = '<div class="board" data-carry style="--s:' + best + 'px;grid-template-columns:repeat(' + cols + ',' + best + 'px)">' + cells + '</div>';
+    var btns = stage.querySelectorAll(".cell");
+    for(var b=0;b<btns.length;b++){
+      btns[b].onclick = function(){
+        var k = +this.getAttribute("data-i"), L = LETTERS[k];
+        clearTimers(); popSound(k % 8);
+        seen[k] = true; this.classList.add("seen");
+        var old = stage.querySelector(".spot"); if(old) old.remove();
+        var spot = document.createElement("div");
+        spot.className = "spot";
+        spot.innerHTML = '<div class="center pop"><div class="big"><span>' + L[0] + '</span><span class="lo">' + L[0].toLowerCase() + '</span></div>' +
+          '<div class="reward show"><span>' + L[2] + '</span><span>' + cap(L[1]) + '</span></div></div>';
+        stage.appendChild(spot);
+        flyBeside(spot.querySelector(".big"), 450);
+        function close(){ if(spot.isConnected){ spot.remove(); perch(450); armNudge(); } }
+        spot.onclick = function(){ stopVoice(); close(); };
+        say(L[0] === "X" ? "X! Fox ends with X!" : L[0] + "! " + L[0] + " is for " + L[1] + "!", function(){ later(500, close); }, ["lr_" + L[0]]);
+      };
+    }
+  }, function(){
+    if(!stage.querySelector(".spot")) prompt("Tap any letter!", ["board"]);
+  });
+}
+
+/* ---------- find the letter: no wrong answers, just hints ---------- */
+var streak = 0, lastFind = -1;
+function findRound(){
+  mode = "find"; homeBtn.hidden = false;
+  var n = streak >= 5 ? 3 : 2, picks = [], solved = false;
+  while(picks.length < n){
+    var r = Math.floor(Math.random() * 26);
+    if(picks.indexOf(r) < 0 && !(picks.length === 0 && r === lastFind)) picks.push(r);
+  }
+  var target = picks[0]; lastFind = target;
+  var T = LETTERS[target][0];
+  picks.sort(function(){ return Math.random() - 0.5; });
+  bring(function(){
+    var html = "";
+    picks.forEach(function(k){
+      html += '<button class="big choice" data-i="' + k + '"' + (k === target ? " data-target" : "") + ' aria-label="Letter ' + LETTERS[k][0] + '">' + LETTERS[k][0] + '</button>';
+    });
+    stage.innerHTML = '<div class="lesson"><div class="pair' + (n === 3 ? " three" : "") + '" data-carry>' + html + '</div></div>';
+    var clips = ["tb_" + T]; picks.forEach(function(k){ clips.push("ln_" + LETTERS[k][0]); }); preload(clips);
+    var btns = stage.querySelectorAll(".choice");
+    for(var b=0;b<btns.length;b++){
+      btns[b].onclick = function(){
+        var k = +this.getAttribute("data-i"), D = LETTERS[k][0];
+        if(k === target){
+          clearTimers(); popSound(3);
+          if(solved) return;
+          solved = true; streak++;
+          celebrate();
+          var p = praiseIdx();
+          say(T + "! " + PRAISE[p], function(){ later(600, function(){ if(mode === "find") findRound(); }); }, ["ln_" + T, "praise" + p]);
+        } else if(!solved){
+          popSound(0);
+          this.classList.add("wrong"); this.classList.remove("nudge"); void this.offsetWidth; this.classList.add("nudge");
+          say(D + "! Tap the big " + T + "!", null, ["ln_" + D, "tb_" + T]);
+          armNudge();
+        }
+      };
+    }
+  }, function(){
+    if(!solved) prompt("Tap the big " + T + "!", ["tb_" + T]);
+  });
+}
+
+homeBtn.onclick = function(){ popSound(0); home(); };
+var resizeTimer = 0;
+function settle(){ clearTimeout(resizeTimer); resizeTimer = setTimeout(function(){ perch(0); }, 150); }
+window.addEventListener("resize", settle);
+window.addEventListener("load", settle);
+try{ if(document.fonts && document.fonts.ready) document.fonts.ready.then(settle); }catch(e){}
+
+startScreen();
+})();
+</script>
+</body>
+</html>
