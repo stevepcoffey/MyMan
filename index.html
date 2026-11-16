@@ -275,6 +275,9 @@ function loadClip(id){
   p.catch(function(){ delete clipCache[id]; });
   return p;
 }
+function loadAny(opts){   // "home|hello" = play home if it exists, otherwise hello
+  return loadClip(opts[0]).catch(function(e){ if(opts.length > 1) return loadAny(opts.slice(1)); throw e; });
+}
 function preload(ids){ if(!ac) return; ids.forEach(function(id){ try{ loadClip(id).catch(function(){}); }catch(e){} }); }
 function stopVoice(){
   voiceToken++;
@@ -287,7 +290,7 @@ function playClips(ids, done){
     if(my !== voiceToken) return;
     if(i >= ids.length){ done(); return; }
     var id = ids[i++];
-    loadClip(id).then(function(buf){
+    loadAny(id.split("|")).then(function(buf){
       if(my !== voiceToken) return;
       var src = ac.createBufferSource();
       src.buffer = buf; src.connect(ac.destination);
@@ -455,7 +458,7 @@ function home(){
   $("#brdBtn").onclick = function(){ popSound(6); board(); };
   $("#fndBtn").onclick = function(){ popSound(7); findRound(); };
   perch(500);
-  prompt("I'm MyMan, let's learn the alphabet and our numbers!", ["home"]);
+  prompt("I'm MyMan, let's learn the alphabet and our numbers!", ["home|hello"]);
 }
 
 function letter(i){
