@@ -369,9 +369,44 @@ function say(text, after, clips, onStep){
 
 /* ---------- sound effects ---------- */
 var ac = null;
-function initAudio(){
-  try{ var C = window.AudioContext || window.webkitAudioContext; if(C && !ac) ac = new C(); if(ac && ac.state === "suspended") ac.resume(); }catch(e){}
+var silentEl = null;
+function isAppleTouch(){
+  try{ return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); }catch(e){ return false; }
 }
+/* iPhones and iPads mute web-page sound when the ring/silent switch is on silent.
+   Marking the page as media playback (or, on older versions, keeping a silent
+   audio element playing) makes the voice audible anyway. */
+function unlockPhoneAudio(){
+  try{ if(navigator.audioSession){ navigator.audioSession.type = "playback"; return; } }catch(e){}
+  if(!isAppleTouch() || silentEl) return;
+  try{
+    var sr = 8000, n = sr / 2, buf = new ArrayBuffer(44 + n), v = new DataView(buf);
+    function str(o, t){ for(var i=0;i<t.length;i++) v.setUint8(o + i, t.charCodeAt(i)); }
+    str(0, "RIFF"); v.setUint32(4, 36 + n, true); str(8, "WAVEfmt "); v.setUint32(16, 16, true);
+    v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, sr, true); v.setUint32(28, sr, true);
+    v.setUint16(32, 1, true); v.setUint16(34, 8, true); str(36, "data"); v.setUint32(40, n, true);
+    for(var i=0;i<n;i++) v.setUint8(44 + i, 128);
+    silentEl = new Audio(URL.createObjectURL(new Blob([buf], { type: "audio/wav" })));
+    silentEl.loop = true; silentEl.setAttribute("playsinline", "");
+    var p = silentEl.play(); if(p && p.catch) p.catch(function(){});
+  }catch(e){}
+}
+function initAudio(){
+  unlockPhoneAudio();
+  try{
+    var C = window.AudioContext || window.webkitAudioContext;
+    if(C && !ac) ac = new C();
+    if(ac && ac.state !== "running") ac.resume();
+  }catch(e){}
+}
+/* phones suspend sound when the page is left; wake it on the next touch */
+document.addEventListener("pointerdown", function(){
+  try{ if(ac && ac.state !== "running") ac.resume(); }catch(e){}
+  try{ if(silentEl && silentEl.paused){ var p = silentEl.play(); if(p && p.catch) p.catch(function(){}); } }catch(e){}
+}, true);
+document.addEventListener("visibilitychange", function(){
+  try{ if(document.hidden && silentEl) silentEl.pause(); }catch(e){}
+});
 function tone(freq, delay, dur){
   if(!ac || muted) return;
   try{
