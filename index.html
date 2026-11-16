@@ -325,6 +325,7 @@ function playClips(ids, done, onStep){
     if(my !== voiceToken) return;
     if(i >= ids.length){ done(); return; }
     var step = i, id = ids[i++];
+    if(id.charAt(0) === "~"){ if(onStep) onStep(step); setTimeout(next, +id.slice(1)); return; }   // "~600" = a pause
     loadAny(id.split("|")).then(function(buf){
       if(my !== voiceToken) return;
       if(onStep) onStep(step);
@@ -452,7 +453,7 @@ function armNudge(){
       later(2000, function(){ perch(500); });
     }
     armNudge();
-  }, 9000);
+  }, 14000);
 }
 function prompt(text, clips){ lastPrompt = text; lastClips = clips || null; nudges = 0; say(text, null, clips); armNudge(); }
 function celebrate(){
@@ -764,8 +765,8 @@ function spellOut(veh, word, art){
   speller.hidden = false;
   flyBeside(veh, 500);
   var spans = speller.querySelectorAll(".word span");
-  var clips = up.split("").map(function(c){ return "ln_" + c; }).concat([word]);
-  preload(clips);
+  var clips = up.split("").map(function(c){ return "ln_" + c; }).concat(["~600", word]);
+  preload(clips.filter(function(c){ return c.charAt(0) !== "~"; }));
   spellCleanup = function(){
     if(done) return; done = true;
     spellCleanup = null; speller.hidden = true;
@@ -773,7 +774,7 @@ function spellOut(veh, word, art){
   };
   setTimeout(function(){ if(my === spellSeq && !done){ spellCleanup(); hero.classList.remove("talking"); } }, 11000);
   inSpellSay = true;
-  say(up.split("").join(" - ") + ". " + cap(word) + "!", function(){
+  say(up.split("").join(" - ") + " ... " + cap(word) + "!", function(){
     setTimeout(function(){
       if(my !== spellSeq || done) return;
       spellCleanup();
@@ -783,6 +784,7 @@ function spellOut(veh, word, art){
   }, clips, function(i){
     if(done) return;
     if(i < spans.length){ spans[i].classList.add("on"); popSound(i); }
+    else if(i === spans.length){ /* short pause before the whole word */ }
     else { for(var q=0;q<spans.length;q++) spans[q].classList.add("on"); speller.classList.add("done"); winSound(); }
   });
   inSpellSay = false;
