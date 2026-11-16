@@ -37,7 +37,8 @@ button:focus-visible{outline:5px solid var(--ink);outline-offset:4px}
 #app{position:relative;height:100%;display:flex;flex-direction:column;padding:12px 16px 16px;gap:8px}
 .scenery{position:absolute;inset:0;pointer-events:none;z-index:0}
 .scenery svg{position:absolute}
-.skyline{left:0;bottom:0;width:100%;height:40%}
+.skyline{left:0;bottom:0;width:100%;height:58%}
+.skyline.far{height:76%;opacity:.4;transform:scaleX(-1)}
 .web{right:0;top:0;width:min(34vmin,220px);height:min(34vmin,220px)}
 
 /* top controls (for grown-ups) */
@@ -57,8 +58,10 @@ button:focus-visible{outline:5px solid var(--ink);outline-offset:4px}
 .veh.rev{animation-name:crossRev}
 .veh.rev svg{transform:scaleX(-1)}
 .veh.plane{--w:clamp(70px,14vmin,130px)}
-.veh.car{--w:clamp(64px,12vmin,112px)}
+.veh.car{--w:clamp(64px,12vmin,112px);opacity:.7}
 .veh.still{animation:none;left:var(--x)}
+.crawl{position:absolute;width:clamp(34px,6.5vmin,58px);padding:0;background:none;pointer-events:auto;opacity:.4;animation:var(--path) var(--t) ease-in-out infinite alternate}
+.crawl svg{display:block;width:100%;height:auto}
 .credit{position:absolute;left:0;right:0;bottom:3px;z-index:0;text-align:center;font-size:11px;font-weight:600;color:var(--ink);opacity:.6;pointer-events:none}
 #speller{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);z-index:5;pointer-events:none;
   display:flex;flex-direction:column;align-items:center;gap:1.5vh;background:rgba(255,255,255,.93);border-radius:24px;padding:2vh 3vw;box-shadow:0 6px 0 rgba(29,36,64,.12)}
@@ -73,7 +76,7 @@ button:focus-visible{outline:5px solid var(--ink);outline-offset:4px}
 /* guide */
 .guide{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:12px}
 #perch{flex:none;width:clamp(84px,20vmin,170px);aspect-ratio:200/215}
-#hero{position:absolute;left:0;top:0;z-index:4;width:clamp(84px,20vmin,170px);pointer-events:none;transition:transform 0ms;will-change:transform}
+#hero{position:absolute;left:0;top:0;z-index:4;width:clamp(84px,20vmin,170px);pointer-events:auto;cursor:pointer;transition:transform 0ms;will-change:transform}
 #hero .inner{animation:bob 2.6s ease-in-out infinite}
 #hero svg{position:relative;display:block;width:100%;height:auto}
 #hero.cheer .inner{animation:cheer .6s ease-in-out 3}
@@ -118,7 +121,7 @@ button:focus-visible{outline:5px solid var(--ink);outline-offset:4px}
 .nav svg{width:50%;height:50%}
 .center{display:flex;flex-direction:column;align-items:center;gap:4vh}
 .big{
-  font-weight:800;line-height:1;font-size:min(32vh,40vw);
+  font-weight:800;line-height:1;font-size:min(32vh,33vw);
   background:var(--sun);box-shadow:0 .07em 0 var(--sun-dark);
   border-radius:.16em;padding:.1em .28em .02em;display:flex;align-items:baseline;gap:.12em;
 }
@@ -126,6 +129,12 @@ button:focus-visible{outline:5px solid var(--ink);outline-offset:4px}
 .reward{font-size:min(7.5vh,9vw);line-height:1.1;font-weight:800;display:flex;align-items:center;gap:.3em;visibility:hidden;background:var(--card);border-radius:.5em;padding:.1em .5em;box-shadow:0 4px 0 rgba(29,36,64,.12)}
 .reward.show{visibility:visible;animation:pop .4s cubic-bezier(.3,1.6,.5,1)}
 
+.wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2vh;width:100%}
+.strip{display:grid;gap:3px;justify-content:center}
+.chip{height:var(--ch);padding:0;border-radius:8px;background:rgba(255,255,255,.8);color:var(--ink);font-weight:800;font-size:calc(var(--ch)*.48);line-height:1}
+.chip.cur{background:var(--sun);box-shadow:0 3px 0 var(--sun-dark)}
+.count.many .numeral{font-size:min(17vh,24vw)}
+.friends.many{--s:min(8.6vh,13vw)}
 .count{display:flex;flex-direction:column;align-items:center;gap:2.5vh}
 .numeral{
   font-weight:800;line-height:1;font-size:min(24vh,30vw);color:#fff;
@@ -141,7 +150,8 @@ button:focus-visible{outline:5px solid var(--ink);outline-offset:4px}
 .friend.caught b{display:grid}
 @media (orientation:landscape){
   .count{flex-direction:row;gap:5vw}
-  .friends{--s:min(17vh,9.5vw)}
+  .friends{--s:min(15vh,9.5vw)}
+  .friends.many{--s:min(10.5vh,7vw)}
 }
 
 /* bubble pop */
@@ -178,6 +188,9 @@ div.big{cursor:default}
 @keyframes ghost{to{transform:scale(2.4);opacity:0}}
 @keyframes cross{from{transform:translateX(calc(-1 * var(--w) - 10px))}to{transform:translateX(100vw)}}
 @keyframes crossRev{from{transform:translateX(100vw)}to{transform:translateX(calc(-1 * var(--w) - 10px))}}
+@keyframes crawlRight{to{transform:translateX(18vw)}}
+@keyframes crawlLeft{to{transform:translateX(-15vw)}}
+@keyframes crawlUp{to{transform:translateY(-24vh)}}
 @keyframes bob{50%{transform:translateY(-6%)}}
 @keyframes cheer{50%{transform:translateY(-14%) rotate(8deg)}}
 @keyframes chat{from{transform:scaleY(.5)}to{transform:scaleY(1.5)}}
@@ -291,7 +304,8 @@ var LETTERS = [
   ["P","pizza","🍕"],["Q","queen","👸"],["R","rainbow","🌈"],["S","sun","☀️"],["T","turtle","🐢"],
   ["U","umbrella","☂️"],["V","van","🚐"],["W","whale","🐳"],["X","fox","🦊"],["Y","yo-yo","🪀"],["Z","zebra","🦓"]
 ];
-var WORDS = ["zero","one","two","three","four","five","six","seven","eight","nine","ten"];
+var WORDS = ["zero","one","two","three","four","five","six","seven","eight","nine","ten","eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen","twenty"];
+var MAXN = 20;
 var PRAISE = ["Great job!","You did it!","Super!","Wow, amazing!","Way to go!","Hooray!"];
 function praiseIdx(){ return Math.floor(Math.random()*PRAISE.length); }
 function cap(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -340,6 +354,11 @@ var sayToken = 0, sayTimer = 0;
 var spellCleanup = null, inSpellSay = false;
 function say(text, after, clips, onStep){
   if(spellCleanup && !inSpellSay) spellCleanup();
+  if(heroBig && !inHeroSay){   // something else started: MyMan shrinks back
+    heroBig = false; heroScale = 1; place(hx, hy, 300, 0);
+    var px = hx, py = hy;
+    setTimeout(function(){ if(hx === px && hy === py && !heroBig) perch(450); }, 700);
+  }
   bubble.textContent = text;
   var token = ++sayToken, fired = false;
   clearTimeout(sayTimer);
@@ -423,11 +442,29 @@ function winSound(){ [523,659,784,1047].forEach(function(f,i){ tone(f, i*0.1, 0.
 /* ---------- helpers ---------- */
 var app = $("#app");
 var mode = "start", li = 0, ni = 1, counted = 0, lastPrompt = "", lastClips = null, nudges = 0, nudgeTimer = 0;
-var scene = 0, hx = 0, hy = 0, tiltTimer = 0;
+var scene = 0, hx = 0, hy = 0, tiltTimer = 0, heroScale = 1, heroBig = false, inHeroSay = false;
 var EASE_FLY = "cubic-bezier(.45,.05,.3,1)", EASE_CARRY = "cubic-bezier(.2,.8,.3,1)";
 function later(ms, fn){ var my = scene; return setTimeout(function(){ if(my === scene) fn(); }, ms); }
 function clearTimers(){ clearTimeout(nudgeTimer); }
 function cap2(n){ return cap(WORDS[n]); }
+/* row of small chips under the card so a grown-up can jump to any letter or number */
+function stripHTML(count, cur, label, aria){
+  var W = stage.clientWidth, gap = 3;
+  var cols = W >= count * 30 ? count : Math.ceil(count / 2);
+  var cw = Math.max(18, Math.min(44, Math.floor((W - (cols - 1) * gap) / cols)));
+  var ch = Math.max(30, Math.min(42, cw + 6));
+  var h = '<div class="strip" style="--ch:' + ch + 'px;grid-template-columns:repeat(' + cols + ',' + cw + 'px)">';
+  for(var k=0;k<count;k++){
+    h += '<button class="chip' + (k === cur ? " cur" : "") + '" data-k="' + k + '" aria-label="' + aria + label(k) + '"' + (k === cur ? ' aria-current="true"' : "") + '>' + label(k) + '</button>';
+  }
+  return h + '</div>';
+}
+function wireStrip(go){
+  var chips = stage.querySelectorAll(".chip");
+  for(var c=0;c<chips.length;c++){
+    chips[c].onclick = function(){ popSound(1); go(+this.getAttribute("data-k")); };
+  }
+}
 
 /* ---------- MyMan flies around ---------- */
 function rectIn(el){
@@ -437,7 +474,7 @@ function rectIn(el){
 function place(x, y, ms, tilt, ease){
   hero.style.transitionDuration = (ms || 0) + "ms";
   hero.style.transitionTimingFunction = ease || EASE_FLY;
-  hero.style.transform = "translate(" + x + "px," + y + "px) rotate(" + (tilt || 0) + "deg)";
+  hero.style.transform = "translate(" + x + "px," + y + "px) rotate(" + (tilt || 0) + "deg) scale(" + heroScale + ")";
   hx = x; hy = y;
 }
 function flyTo(x, y, ms, ease){
@@ -454,7 +491,7 @@ function flyBeside(el, ms){
 /* MyMan zooms off, then flies back in carrying the next card */
 function bring(build, after){
   scene++; clearTimers(); if(spellCleanup) spellCleanup();
-  var old = stage.firstElementChild;
+  var old = stage.querySelector("[data-carry]") || stage.firstElementChild;
   if(old) old.classList.add("leaving");
   var a = app.getBoundingClientRect();
   flyTo(a.width + 30, a.height * 0.45, 420);
@@ -549,13 +586,15 @@ function letter(i){
   mode = "letters"; homeBtn.hidden = false;
   var L = LETTERS[li], solved = false;
   bring(function(){
-    stage.innerHTML = '<div class="lesson">' +
+    stage.innerHTML = '<div class="wrap"><div class="lesson">' +
       '<button class="nav" id="prevBtn" aria-label="Previous letter">' + ARROW_L + '</button>' +
       '<div class="center" data-carry>' +
         '<button class="big" id="bigBtn" data-target aria-label="Letter ' + L[0] + '"><span>' + L[0] + '</span><span class="lo">' + L[0].toLowerCase() + '</span></button>' +
         '<div class="reward" id="reward"><span>' + L[2] + '</span><span>' + cap(L[1]) + '</span></div>' +
       '</div>' +
-      '<button class="nav" id="nextBtn" aria-label="Next letter">' + ARROW_R + '</button></div>';
+      '<button class="nav" id="nextBtn" aria-label="Next letter">' + ARROW_R + '</button></div>' +
+      stripHTML(26, li, function(k){ return LETTERS[k][0]; }, "Letter ") + '</div>';
+    wireStrip(function(k){ letter(k); });
     preload(["lp_" + L[0], "lr_" + L[0]]);
     $("#prevBtn").onclick = function(){ popSound(0); letter(li - 1); };
     $("#nextBtn").onclick = function(){ popSound(0); letter(li + 1); };
@@ -577,7 +616,7 @@ function letter(i){
 }
 
 function number(n){
-  ni = n > 10 ? 1 : (n < 1 ? 10 : n);
+  ni = n > MAXN ? 1 : (n < 1 ? MAXN : n);
   mode = "numbers"; homeBtn.hidden = false;
   counted = 0;
   bring(function(){
@@ -586,10 +625,12 @@ function number(n){
       var c = FRIENDS[k % FRIENDS.length];
       friends += '<button class="friend" data-target aria-label="Spider friend">' + spider(c[0], c[1], null) + '<b></b></button>';
     }
-    stage.innerHTML = '<div class="lesson">' +
+    stage.innerHTML = '<div class="wrap"><div class="lesson">' +
       '<button class="nav" id="prevBtn" aria-label="Previous number">' + ARROW_L + '</button>' +
-      '<div class="count" data-carry><div class="numeral">' + ni + '</div><div class="friends">' + friends + '</div></div>' +
-      '<button class="nav" id="nextBtn" aria-label="Next number">' + ARROW_R + '</button></div>';
+      '<div class="count' + (ni > 10 ? " many" : "") + '" data-carry><div class="numeral">' + ni + '</div><div class="friends' + (ni > 10 ? " many" : "") + '">' + friends + '</div></div>' +
+      '<button class="nav" id="nextBtn" aria-label="Next number">' + ARROW_R + '</button></div>' +
+      stripHTML(MAXN, ni - 1, function(k){ return String(k + 1); }, "Number ") + '</div>';
+    wireStrip(function(k){ number(k + 1); });
     var pre = ["np_" + ni, "nf_" + ni]; for(var q=1;q<=ni;q++) pre.push("c_" + q); preload(pre);
     $("#prevBtn").onclick = function(){ popSound(0); number(ni - 1); };
     $("#nextBtn").onclick = function(){ popSound(0); number(ni + 1); };
@@ -767,6 +808,24 @@ function findRound(){
 
 homeBtn.onclick = function(){ popSound(0); home(); };
 
+/* ---------- tap MyMan: he flies up big and introduces himself ---------- */
+hero.addEventListener("click", function(){
+  if(heroBig) return;
+  initAudio(); clearTimers(); popSound(5);
+  var a = app.getBoundingClientRect(), w = hero.offsetWidth, h = hero.offsetHeight;
+  heroBig = true;
+  heroScale = Math.max(1.6, Math.min(2.6, Math.min(a.width, a.height) * 0.5 / w));
+  flyTo(a.width / 2 - w / 2, a.height * 0.42 - h / 2, 550);
+  hero.classList.remove("cheer"); void hero.offsetWidth; hero.classList.add("cheer");
+  inHeroSay = true;
+  say("I'm MyMan, helping you learn your numbers and your letters!", function(){
+    if(!heroBig) return;
+    heroBig = false; heroScale = 1; perch(550);
+    if(lastPrompt && mode !== "start" && mode !== "bubbles") armNudge();
+  }, ["intro|hello"]);
+  inHeroSay = false;
+});
+
 /* ---------- sound on/off (small, for grown-ups) ---------- */
 var muteBtn = $("#muteBtn");
 function drawMute(){
@@ -787,7 +846,7 @@ var VEH = {
   plane: '<svg viewBox="0 0 120 50"><path d="M12 22L6 5h12l13 16z" fill="#fff"/><path d="M8 28q0-8 14-8h66q20 0 26 8q-6 6-26 6H22q-14 0-14-6z" fill="#fff"/><path d="M52 30L40 47h14l18-17z" fill="#eaf6ff"/><g fill="#7cc8f8"><circle cx="40" cy="26" r="2.600"/><circle cx="52" cy="26" r="2.600"/><circle cx="64" cy="26" r="2.600"/><circle cx="76" cy="26" r="2.600"/><path d="M96 23q8 0 12 4H94z"/></g></svg>',
   car: '<svg viewBox="0 0 100 44"><path d="M6 30q0-8 8-8h10l10-12h30l12 12h12q7 0 7 8v4H6z" fill="COLOR"/><path d="M30 22l7-9h11v9zM52 13h11l8 9H52z" fill="#eaf6ff"/><circle cx="26" cy="35" r="7.500" fill="#5b6785"/><circle cx="74" cy="35" r="7.500" fill="#5b6785"/><circle cx="26" cy="35" r="3" fill="#fff"/><circle cx="74" cy="35" r="3" fill="#fff"/></svg>'
 };
-var CAR_COLORS = ["#ffffff","#ffd6e2","#fff0b8","#d9ccff","#c8f2d3"];
+var CAR_COLORS = ["#ff9db8","#ffcf6b","#b29cff","#86dba0","#7cc4f5"];
 var bg = $("#bg"), speller = $("#speller"), spellSeq = 0;
 function spellOut(veh, word, art){
   if(spellCleanup) return;
@@ -841,6 +900,21 @@ function spawnVeh(kind){
   });
   bg.appendChild(el);
 }
+/* a second, fainter row of buildings behind the first, for a bigger city */
+(function(){
+  var near = document.querySelector(".skyline"), far = near.cloneNode(true);
+  far.classList.add("far"); near.parentNode.insertBefore(far, near);
+})();
+/* friendly spiders wandering slowly over the buildings; tap one to spell it */
+[["8%","30%","crawlRight","27s",0],["64%","10%","crawlUp","23s",2],["40%","45%","crawlLeft","31s",3],["87%","5%","crawlUp","29s",1]].forEach(function(c){
+  var el = document.createElement("button"), col = FRIENDS[c[4]], art = spider(col[0], col[1], null);
+  el.className = "crawl"; el.innerHTML = art;
+  el.setAttribute("aria-label", "A spider. Tap to spell it.");
+  el.style.left = c[0]; el.style.bottom = c[1];
+  el.style.setProperty("--path", c[2]); el.style.setProperty("--t", c[3]);
+  el.onclick = function(){ spellOut(el, "spider", art); };
+  bg.appendChild(el);
+});
 setTimeout(function(){ spawnVeh("plane"); }, 1500);
 setTimeout(function(){ spawnVeh("car"); }, 4000);
 var resizeTimer = 0;
