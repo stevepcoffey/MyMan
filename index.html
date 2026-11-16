@@ -37,7 +37,7 @@ button:focus-visible{outline:5px solid var(--ink);outline-offset:4px}
 #app{position:relative;height:100%;display:flex;flex-direction:column;padding:12px 16px 16px;gap:8px}
 .scenery{position:absolute;inset:0;pointer-events:none;z-index:0}
 .scenery svg{position:absolute}
-.skyline{left:0;bottom:0;width:100%;height:26%}
+.skyline{left:0;bottom:0;width:100%;height:40%}
 .web{right:0;top:0;width:min(34vmin,220px);height:min(34vmin,220px)}
 
 /* top controls (for grown-ups) */
@@ -45,6 +45,30 @@ button:focus-visible{outline:5px solid var(--ink);outline-offset:4px}
 .bar button{width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.75);display:grid;place-items:center}
 .bar svg{width:24px;height:24px}
 .bar [hidden]{display:none}
+.bar #muteBtn{width:30px;height:30px;margin-left:auto;background:rgba(255,255,255,.35);opacity:.6}
+.bar #muteBtn svg{width:16px;height:16px}
+.bar #muteBtn[aria-pressed="true"]{opacity:.9;background:rgba(255,255,255,.8)}
+/* taps on empty space fall through to the background planes and cars */
+#stage,.guide,.bar{pointer-events:none}
+#stage button,.bar button,.spot{pointer-events:auto}
+.bg{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.veh{position:absolute;left:0;width:var(--w);padding:0;background:none;pointer-events:auto;opacity:.55;animation:cross var(--t) linear forwards}
+.veh svg{display:block;width:100%;height:auto}
+.veh.rev{animation-name:crossRev}
+.veh.rev svg{transform:scaleX(-1)}
+.veh.plane{--w:clamp(70px,14vmin,130px)}
+.veh.car{--w:clamp(64px,12vmin,112px)}
+.veh.still{animation:none;left:var(--x)}
+.credit{position:absolute;left:0;right:0;bottom:3px;z-index:0;text-align:center;font-size:11px;font-weight:600;color:var(--ink);opacity:.6;pointer-events:none}
+#speller{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);z-index:5;pointer-events:none;
+  display:flex;flex-direction:column;align-items:center;gap:1.5vh;background:rgba(255,255,255,.93);border-radius:24px;padding:2vh 3vw;box-shadow:0 6px 0 rgba(29,36,64,.12)}
+#speller[hidden]{display:none}
+#speller .pic{width:min(22vh,30vw);background:var(--sky-top);border-radius:16px;padding:1.2vh 1.6vw}
+#speller .pic svg{display:block;width:100%;height:auto}
+#speller .word{display:flex;gap:.12em;font-weight:800;line-height:1;font-size:min(13vh,13vw)}
+#speller .word span{opacity:.15;background:var(--sun);border-radius:.16em;padding:.08em .16em 0;box-shadow:0 .06em 0 var(--sun-dark)}
+#speller .word span.on{opacity:1;animation:pop .35s cubic-bezier(.3,1.6,.5,1)}
+#speller.done .word span{background:var(--hero);box-shadow:0 .06em 0 var(--hero-dark);color:#fff}
 
 /* guide */
 .guide{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:12px}
@@ -152,6 +176,8 @@ div.big{cursor:default}
 @keyframes carry{from{transform:translateX(var(--from))}}
 @keyframes rise{to{transform:translateY(calc(-1 * (var(--h) + var(--d))))}}
 @keyframes ghost{to{transform:scale(2.4);opacity:0}}
+@keyframes cross{from{transform:translateX(calc(-1 * var(--w) - 10px))}to{transform:translateX(100vw)}}
+@keyframes crossRev{from{transform:translateX(100vw)}to{transform:translateX(calc(-1 * var(--w) - 10px))}}
 @keyframes bob{50%{transform:translateY(-6%)}}
 @keyframes cheer{50%{transform:translateY(-14%) rotate(8deg)}}
 @keyframes chat{from{transform:scaleY(.5)}to{transform:scaleY(1.5)}}
@@ -184,9 +210,15 @@ div.big{cursor:default}
     </svg>
   </div>
 
+  <div class="bg" id="bg" aria-hidden="false"></div>
+  <div class="credit">Voice created by ElevenLabs · elevenlabs.io</div>
+
   <div class="bar">
     <button id="homeBtn" aria-label="Back to the start" hidden>
       <svg viewBox="0 0 24 24" fill="none" stroke="#1d2440" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M6 10v10h12V10"/></svg>
+    </button>
+    <button id="muteBtn" aria-label="Sound on or off" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#1d2440" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path class="waves" d="M17 9a4 4 0 010 6M19.5 6.500a8 8 0 010 11"/><path class="slash" d="M17 9l5 6M22 9l-5 6" style="display:none"/></svg>
     </button>
   </div>
 
@@ -197,6 +229,7 @@ div.big{cursor:default}
 
   <main id="stage"></main>
   <div id="hero" aria-hidden="true"></div>
+  <div id="speller" hidden></div>
 
 </div>
 
@@ -279,28 +312,33 @@ function loadAny(opts){   // "home|hello" = play home if it exists, otherwise he
   return loadClip(opts[0]).catch(function(e){ if(opts.length > 1) return loadAny(opts.slice(1)); throw e; });
 }
 function preload(ids){ if(!ac) return; ids.forEach(function(id){ try{ loadClip(id).catch(function(){}); }catch(e){} }); }
+var muted = false;
+try{ muted = localStorage.getItem("mymanMuted") === "1"; }catch(e){}
 function stopVoice(){
   voiceToken++;
   if(voiceSrc){ try{ voiceSrc.onended = null; voiceSrc.stop(); }catch(e){} voiceSrc = null; }
 }
-function playClips(ids, done){
+function playClips(ids, done, onStep){
   stopVoice();
   var my = voiceToken, i = 0;
   (function next(){
     if(my !== voiceToken) return;
     if(i >= ids.length){ done(); return; }
-    var id = ids[i++];
+    var step = i, id = ids[i++];
     loadAny(id.split("|")).then(function(buf){
       if(my !== voiceToken) return;
+      if(onStep) onStep(step);
       var src = ac.createBufferSource();
       src.buffer = buf; src.connect(ac.destination);
       src.onended = function(){ if(my === voiceToken){ voiceSrc = null; setTimeout(next, 120); } };
       voiceSrc = src; src.start();
-    }).catch(function(){ if(my === voiceToken) setTimeout(next, 900); });
+    }).catch(function(){ if(my === voiceToken){ if(onStep) onStep(step); setTimeout(next, 900); } });
   })();
 }
 var sayToken = 0, sayTimer = 0;
-function say(text, after, clips){
+var spellCleanup = null, inSpellSay = false;
+function say(text, after, clips, onStep){
+  if(spellCleanup && !inSpellSay) spellCleanup();
   bubble.textContent = text;
   var token = ++sayToken, fired = false;
   clearTimeout(sayTimer);
@@ -310,12 +348,21 @@ function say(text, after, clips){
     if(after) after();
   }
   hero.classList.add("talking");
-  if(clips && clips.length && ac){
-    playClips(clips, function(){ setTimeout(finish, 250); });
+  if(clips && clips.length && ac && !muted){
+    playClips(clips, function(){ setTimeout(finish, 250); }, onStep);
     sayTimer = setTimeout(finish, 12000);   // safety net if audio never finishes
   } else {
     stopVoice();
-    sayTimer = setTimeout(finish, Math.min(text.length * 45 + 900, 3200));
+    if(onStep && clips){
+      var k = 0;
+      (function tick(){
+        if(token !== sayToken) return;
+        if(k >= clips.length){ finish(); return; }
+        onStep(k++); sayTimer = setTimeout(tick, 650);
+      })();
+    } else {
+      sayTimer = setTimeout(finish, Math.min(text.length * 45 + 900, 3200));
+    }
   }
 }
 
@@ -325,7 +372,7 @@ function initAudio(){
   try{ var C = window.AudioContext || window.webkitAudioContext; if(C && !ac) ac = new C(); if(ac && ac.state === "suspended") ac.resume(); }catch(e){}
 }
 function tone(freq, delay, dur){
-  if(!ac) return;
+  if(!ac || muted) return;
   try{
     var o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime + delay;
     o.type = "triangle"; o.frequency.value = freq;
@@ -365,12 +412,12 @@ function flyTo(x, y, ms, ease){
 }
 function perch(ms){ var r = rectIn($("#perch")); flyTo(r.x, r.y, ms == null ? 500 : ms); }
 function flyBeside(el, ms){
-  var r = rectIn(el), w = hero.offsetWidth, h = hero.offsetHeight;
-  flyTo(Math.max(0, r.x - w * 0.6), Math.max(0, r.y + r.h / 2 - h / 2), ms || 600);
+  var r = rectIn(el), w = hero.offsetWidth, h = hero.offsetHeight, a = app.getBoundingClientRect();
+  flyTo(Math.max(0, r.x - w * 0.6), Math.max(0, Math.min(a.height - h, r.y + r.h / 2 - h / 2)), ms || 600);
 }
 /* MyMan zooms off, then flies back in carrying the next card */
 function bring(build, after){
-  scene++; clearTimers();
+  scene++; clearTimers(); if(spellCleanup) spellCleanup();
   var old = stage.firstElementChild;
   if(old) old.classList.add("leaving");
   var a = app.getBoundingClientRect();
@@ -683,6 +730,82 @@ function findRound(){
 }
 
 homeBtn.onclick = function(){ popSound(0); home(); };
+
+/* ---------- sound on/off (small, for grown-ups) ---------- */
+var muteBtn = $("#muteBtn");
+function drawMute(){
+  muteBtn.setAttribute("aria-pressed", muted ? "true" : "false");
+  muteBtn.querySelector(".waves").style.display = muted ? "none" : "";
+  muteBtn.querySelector(".slash").style.display = muted ? "" : "none";
+}
+muteBtn.onclick = function(){
+  muted = !muted;
+  try{ localStorage.setItem("mymanMuted", muted ? "1" : "0"); }catch(e){}
+  if(muted) stopVoice(); else initAudio();
+  drawMute();
+};
+drawMute();
+
+/* ---------- background planes and cars: tap one and MyMan spells it ---------- */
+var VEH = {
+  plane: '<svg viewBox="0 0 120 50"><path d="M12 22L6 5h12l13 16z" fill="#fff"/><path d="M8 28q0-8 14-8h66q20 0 26 8q-6 6-26 6H22q-14 0-14-6z" fill="#fff"/><path d="M52 30L40 47h14l18-17z" fill="#eaf6ff"/><g fill="#7cc8f8"><circle cx="40" cy="26" r="2.600"/><circle cx="52" cy="26" r="2.600"/><circle cx="64" cy="26" r="2.600"/><circle cx="76" cy="26" r="2.600"/><path d="M96 23q8 0 12 4H94z"/></g></svg>',
+  car: '<svg viewBox="0 0 100 44"><path d="M6 30q0-8 8-8h10l10-12h30l12 12h12q7 0 7 8v4H6z" fill="COLOR"/><path d="M30 22l7-9h11v9zM52 13h11l8 9H52z" fill="#eaf6ff"/><circle cx="26" cy="35" r="7.500" fill="#5b6785"/><circle cx="74" cy="35" r="7.500" fill="#5b6785"/><circle cx="26" cy="35" r="3" fill="#fff"/><circle cx="74" cy="35" r="3" fill="#fff"/></svg>'
+};
+var CAR_COLORS = ["#ffffff","#ffd6e2","#fff0b8","#d9ccff","#c8f2d3"];
+var bg = $("#bg"), speller = $("#speller"), spellSeq = 0;
+function spellOut(veh, word, art){
+  if(spellCleanup) return;
+  initAudio(); clearTimers();
+  var my = ++spellSeq, up = word.toUpperCase(), done = false;
+  veh.style.animationPlayState = "paused";
+  speller.className = "";
+  speller.innerHTML = '<div class="pic">' + art + '</div><div class="word">' +
+    up.split("").map(function(c){ return "<span>" + c + "</span>"; }).join("") + '</div>';
+  speller.hidden = false;
+  flyBeside(veh, 500);
+  var spans = speller.querySelectorAll(".word span");
+  var clips = up.split("").map(function(c){ return "ln_" + c; }).concat([word]);
+  preload(clips);
+  spellCleanup = function(){
+    if(done) return; done = true;
+    spellCleanup = null; speller.hidden = true;
+    veh.style.animationPlayState = "running";
+  };
+  setTimeout(function(){ if(my === spellSeq && !done){ spellCleanup(); hero.classList.remove("talking"); } }, 11000);
+  inSpellSay = true;
+  say(up.split("").join(" - ") + ". " + cap(word) + "!", function(){
+    setTimeout(function(){
+      if(my !== spellSeq || done) return;
+      spellCleanup();
+      if(mode !== "bubbles") perch(500);
+      if(lastPrompt && mode !== "start" && mode !== "bubbles") armNudge();
+    }, 1100);
+  }, clips, function(i){
+    if(done) return;
+    if(i < spans.length){ spans[i].classList.add("on"); popSound(i); }
+    else { for(var q=0;q<spans.length;q++) spans[q].classList.add("on"); speller.classList.add("done"); winSound(); }
+  });
+  inSpellSay = false;
+}
+function spawnVeh(kind){
+  var el = document.createElement("button"), rev = kind === "car" && Math.random() < 0.5;
+  var art = kind === "car" ? VEH.car.replace("COLOR", CAR_COLORS[Math.floor(Math.random() * CAR_COLORS.length)]) : VEH.plane;
+  el.className = "veh " + kind + (rev ? " rev" : "") + (STILL ? " still" : "");
+  el.setAttribute("aria-label", "A " + kind + ". Tap to spell it.");
+  el.innerHTML = art;
+  if(kind === "plane") el.style.top = (9 + Math.random() * 22) + "%"; else el.style.bottom = "20px";
+  el.style.setProperty("--t", (kind === "plane" ? 30 + Math.random() * 10 : 20 + Math.random() * 8) + "s");
+  el.style.setProperty("--x", (kind === "plane" ? 68 : 14) + "%");
+  el.onclick = function(){ spellOut(el, kind, art); };
+  el.addEventListener("animationend", function(e){
+    if(e.animationName !== "cross" && e.animationName !== "crossRev") return;
+    el.remove();
+    setTimeout(function(){ spawnVeh(kind); }, 3000 + Math.random() * 7000);
+  });
+  bg.appendChild(el);
+}
+setTimeout(function(){ spawnVeh("plane"); }, 1500);
+setTimeout(function(){ spawnVeh("car"); }, 4000);
 var resizeTimer = 0;
 function settle(){ clearTimeout(resizeTimer); resizeTimer = setTimeout(function(){ perch(0); }, 150); }
 window.addEventListener("resize", settle);
