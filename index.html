@@ -410,22 +410,38 @@ function unlockPhoneAudio(){
     var p = silentEl.play(); if(p && p.catch) p.catch(function(){});
   }catch(e){}
 }
+var needWake = false;
+/* Must run inside a real tap. Phones stop a page's sound engine when the page
+   is left or the screen locks, and it does not always restart, so after any
+   such break the engine is rebuilt from scratch on the next tap. */
 function initAudio(){
   unlockPhoneAudio();
   try{
     var C = window.AudioContext || window.webkitAudioContext;
-    if(C && !ac) ac = new C();
-    if(ac && ac.state !== "running") ac.resume();
+    if(!C) return;
+    if(ac && (needWake || ac.state === "closed")){
+      try{ stopVoice(); }catch(e){}
+      try{ ac.close(); }catch(e){}
+      ac = null; clipCache = {}; clipOrder = [];
+    }
+    needWake = false;
+    if(!ac){
+      ac = new C();
+      ac.onstatechange = function(){ if(this === ac && this.state !== "running" && this.state !== "suspended") needWake = true; };
+    }
+    if(ac.state !== "running"){ var p = ac.resume(); if(p && p.catch) p.catch(function(){ needWake = true; }); }
   }catch(e){}
+  try{ if(silentEl && silentEl.paused){ var q = silentEl.play(); if(q && q.catch) q.catch(function(){}); } }catch(e){}
 }
-/* phones suspend sound when the page is left; wake it on the next touch */
-document.addEventListener("pointerdown", function(){
-  try{ if(ac && ac.state !== "running") ac.resume(); }catch(e){}
-  try{ if(silentEl && silentEl.paused){ var p = silentEl.play(); if(p && p.catch) p.catch(function(){}); } }catch(e){}
-}, true);
-document.addEventListener("visibilitychange", function(){
-  try{ if(document.hidden && silentEl) silentEl.pause(); }catch(e){}
+/* wake the sound on every tap once the game has started (touchend, pointerup
+   and click are the events phones accept for starting sound) */
+["touchend","pointerup","click","keydown"].forEach(function(ev){
+  document.addEventListener(ev, function(){ if(ac && (needWake || ac.state !== "running")) initAudio(); }, true);
 });
+document.addEventListener("visibilitychange", function(){
+  if(document.hidden){ needWake = true; try{ if(silentEl) silentEl.pause(); }catch(e){} }
+});
+window.addEventListener("pageshow", function(e){ if(e.persisted) needWake = true; });
 function tone(freq, delay, dur){
   if(!ac || muted) return;
   try{
@@ -556,7 +572,8 @@ function startScreen(){
   mode = "start"; homeBtn.hidden = true;
   stage.innerHTML = '<div class="start">' +
     '<button class="tile play" id="playBtn" data-target><svg viewBox="0 0 24 24" fill="#fff"><path d="M6 3.5v17a1 1 0 001.5.86l14-8.5a1 1 0 000-1.72l-14-8.500A1 1 0 006 3.500z"/></svg>Play</button>' +
-    '<p>Grown-ups: turn the sound on. MyMan talks and flies over to show what to tap.</p></div>';
+    '<p id="startNote"></p></div>';
+  drawMute();
   $("#playBtn").onclick = function(){ initAudio(); popSound(0); home(); };
   perch(0);
 }
@@ -827,13 +844,17 @@ hero.addEventListener("click", function(){
 });
 
 /* ---------- sound on/off (small, for grown-ups) ---------- */
-var muteBtn = $("#muteBtn");
 function drawMute(){
+  var muteBtn = $("#muteBtn");
+  var note = document.getElementById("startNote");
+  if(note) note.textContent = muted
+    ? "Sound is switched off. Tap the small speaker at the top right to turn it back on."
+    : "Grown-ups: turn the sound on. MyMan talks and flies over to show what to tap.";
   muteBtn.setAttribute("aria-pressed", muted ? "true" : "false");
   muteBtn.querySelector(".waves").style.display = muted ? "none" : "";
   muteBtn.querySelector(".slash").style.display = muted ? "" : "none";
 }
-muteBtn.onclick = function(){
+$("#muteBtn").onclick = function(){
   muted = !muted;
   try{ localStorage.setItem("mymanMuted", muted ? "1" : "0"); }catch(e){}
   if(muted) stopVoice(); else initAudio();
