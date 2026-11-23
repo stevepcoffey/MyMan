@@ -112,6 +112,21 @@ button:focus-visible{outline:5px solid var(--ink);outline-offset:4px}
 .tile.bub3{--fill:#3fa7ff;--shade:#1b74c9;color:#fff}
 .tile.brd{--fill:#4fca6a;--shade:#2a9645;color:#fff}
 .tile.fnd{--fill:#8e6bff;--shade:#5b3fd1;color:#fff}
+.tile.trc{--fill:#ff8a3d;--shade:#cf6212;color:#fff}
+/* trace the letter */
+.tracepad{pointer-events:auto;touch-action:none;height:min(50vh,92vw);aspect-ratio:100/120;background:rgba(255,255,255,.93);border-radius:24px;box-shadow:0 6px 0 rgba(29,36,64,.12);cursor:pointer}
+@media (max-width:600px){.lesson.tr .nav{display:none}}
+.tracepad svg{display:block;width:100%;height:100%;touch-action:none}
+.tracepad .base{fill:none;stroke:#dde4f2;stroke-width:13;stroke-linecap:round;stroke-linejoin:round}
+.tracepad .base.now{stroke:#ffe9a3}
+.tracepad .ink{fill:none;stroke:var(--hero);stroke-width:13;stroke-linecap:round;stroke-linejoin:round}
+.tracepad .guide{fill:none;stroke:var(--ink);stroke-width:2.2;stroke-linecap:round;stroke-dasharray:.1 5.5}
+.tracepad .arrow{fill:var(--ink)}
+.tracepad .ring{fill:var(--berry);opacity:.35;transform-box:fill-box;transform-origin:center;animation:ring 1.1s ease-out infinite}
+.tracepad .dot{fill:var(--berry);stroke:#fff;stroke-width:2.5}
+.tracepad .demo{fill:#fff;stroke:var(--ink);stroke-width:1.5;opacity:0}
+.tracepad.won .ink{stroke:var(--sun)}
+.tracepad.won .ring,.tracepad.won .dot,.tracepad.won .guide,.tracepad.won .arrow{display:none}
 .start{display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center}
 .start p{margin:0;font-size:clamp(15px,2.4vmin,20px);max-width:34ch;background:rgba(255,255,255,.7);padding:8px 14px;border-radius:14px}
 
@@ -191,6 +206,7 @@ div.big{cursor:default}
 @keyframes crawlRight{to{transform:translateX(18vw)}}
 @keyframes crawlLeft{to{transform:translateX(-15vw)}}
 @keyframes crawlUp{to{transform:translateY(-24vh)}}
+@keyframes ring{from{transform:scale(.9);opacity:.5}to{transform:scale(2.3);opacity:0}}
 @keyframes bob{50%{transform:translateY(-6%)}}
 @keyframes cheer{50%{transform:translateY(-14%) rotate(8deg)}}
 @keyframes chat{from{transform:scaleY(.5)}to{transform:scaleY(1.5)}}
@@ -312,10 +328,12 @@ function cap(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
 
 /* ---------- MyMan's voice (recorded clips in audio/) ---------- */
 var clipCache = {}, clipOrder = [], voiceSrc = null, voiceToken = 0;
+var missing = {};
 function loadClip(id){
   if(clipCache[id]) return clipCache[id];
+  if(missing[id]) return Promise.reject(new Error("missing clip"));
   var p = fetch("audio/" + id + ".mp3")
-    .then(function(r){ if(!r.ok) throw new Error("missing clip"); return r.arrayBuffer(); })
+    .then(function(r){ if(!r.ok){ missing[id] = true; throw new Error("missing clip"); } return r.arrayBuffer(); })
     .then(function(b){ return new Promise(function(res, rej){ ac.decodeAudioData(b, res, rej); }); });
   clipCache[id] = p; clipOrder.push(id);
   if(clipOrder.length > 40) delete clipCache[clipOrder.shift()];
@@ -347,7 +365,7 @@ function playClips(ids, done, onStep){
       src.buffer = buf; src.connect(ac.destination);
       src.onended = function(){ if(my === voiceToken){ voiceSrc = null; setTimeout(next, 120); } };
       voiceSrc = src; src.start();
-    }).catch(function(){ if(my === voiceToken){ if(onStep) onStep(step); setTimeout(next, 900); } });
+    }).catch(function(){ if(my === voiceToken){ if(onStep) onStep(step); setTimeout(next, ids.length > 1 ? 150 : 900); } });
   })();
 }
 var sayToken = 0, sayTimer = 0;
@@ -535,6 +553,7 @@ function armNudge(){
     say(lastPrompt, null, lastClips);
     var els = stage.querySelectorAll("[data-target]:not(.caught)");
     for(var i=0;i<els.length;i++){ els[i].classList.remove("nudge"); void els[i].offsetWidth; els[i].classList.add("nudge"); }
+    if(mode === "trace" && traceDemo){ traceDemo(); flyBeside(stage.querySelector(".tracepad"), 600); later(2200, function(){ perch(500); }); }
     if(els.length){
       // MyMan flies over to show what to tap, then goes back to his spot
       flyBeside(mode === "home" ? els[(nudges - 1) % els.length] : els[0], 600);
@@ -580,6 +599,7 @@ function startScreen(){
 
 var ICON_BUBBLES = '<svg viewBox="0 0 51 30" fill="rgba(255,255,255,.92)"><circle cx="13" cy="18" r="10"/><circle cx="31" cy="10" r="8"/><circle cx="42" cy="22" r="6.5"/></svg>';
 var ICON_BOARD = '<svg viewBox="0 0 51 30" fill="rgba(255,255,255,.92)"><rect x="6" y="1" width="11" height="12" rx="3"/><rect x="20" y="1" width="11" height="12" rx="3"/><rect x="34" y="1" width="11" height="12" rx="3"/><rect x="6" y="17" width="11" height="12" rx="3"/><rect x="20" y="17" width="11" height="12" rx="3"/><rect x="34" y="17" width="11" height="12" rx="3"/></svg>';
+var ICON_TRACE = '<svg viewBox="0 0 51 30" fill="none" stroke="rgba(255,255,255,.95)" stroke-linecap="round" stroke-linejoin="round"><path d="M14 28L25.500 3L37 28" stroke-width="3.4" stroke-dasharray=".1 6.2"/><circle cx="14" cy="28" r="1" stroke-width="7"/></svg>';
 function home(){
   scene++; clearTimers();
   mode = "home"; homeBtn.hidden = true;
@@ -588,12 +608,14 @@ function home(){
     '<button class="tile num pop" id="numBtn" data-target aria-label="Count numbers">123</button>' +
     '<button class="tile bub3 pop" id="bubBtn" data-target aria-label="Pop bubbles">' + ICON_BUBBLES + '</button>' +
     '<button class="tile brd pop" id="brdBtn" data-target aria-label="Letter board">' + ICON_BOARD + '</button>' +
-    '<button class="tile fnd pop" id="fndBtn" data-target aria-label="Find the letter">?</button></div>';
+    '<button class="tile fnd pop" id="fndBtn" data-target aria-label="Find the letter">?</button>' +
+    '<button class="tile trc pop" id="trcBtn" data-target aria-label="Trace the letter">' + ICON_TRACE + '</button></div>';
   $("#abcBtn").onclick = function(){ popSound(2); letter(li); };
   $("#numBtn").onclick = function(){ popSound(4); number(ni); };
   $("#bubBtn").onclick = function(){ popSound(5); bubbles(); };
   $("#brdBtn").onclick = function(){ popSound(6); board(); };
   $("#fndBtn").onclick = function(){ popSound(7); findRound(); };
+  $("#trcBtn").onclick = function(){ popSound(1); trace(ti); };
   perch(500);
   prompt("I'm MyMan, let's learn the alphabet and our numbers!", ["home|hello"]);
 }
@@ -781,6 +803,144 @@ function board(){
 }
 
 /* ---------- find the letter: no wrong answers, just hints ---------- */
+/* ---------- trace the letter: drag the glowing dot along the dotted path ---------- */
+function arcPts(cx, cy, rx, ry, a0, a1){
+  var out = [], n = Math.max(6, Math.round(Math.abs(a1 - a0) / 12));
+  for(var i=0;i<=n;i++){ var a = (a0 + (a1 - a0) * i / n) * Math.PI / 180; out.push([cx + rx * Math.cos(a), cy + ry * Math.sin(a)]); }
+  return out;
+}
+/* each capital letter as pen strokes on a 100 x 120 grid */
+var STROKES = {
+  A: [[[50,10],[20,110]], [[50,10],[80,110]], [[31,76],[69,76]]],
+  B: [[[25,10],[25,110]], [[25,10],[50,10]].concat(arcPts(50,35,25,25,-90,90), [[25,60]]), [[25,60],[52,60]].concat(arcPts(52,85,25,25,-90,90), [[25,110]])],
+  C: [arcPts(50,60,30,50,-50,-310)],
+  D: [[[25,10],[25,110]], [[25,10],[40,10]].concat(arcPts(40,60,38,50,-90,90), [[25,110]])],
+  E: [[[28,10],[28,110]], [[28,10],[75,10]], [[28,60],[68,60]], [[28,110],[75,110]]],
+  F: [[[28,10],[28,110]], [[28,10],[75,10]], [[28,60],[68,60]]],
+  G: [arcPts(50,60,30,50,-50,-360).concat([[55,60]])],
+  H: [[[25,10],[25,110]], [[75,10],[75,110]], [[25,60],[75,60]]],
+  I: [[[50,10],[50,110]], [[30,10],[70,10]], [[30,110],[70,110]]],
+  J: [[[65,10],[65,80]].concat(arcPts(45,80,20,30,0,180))],
+  K: [[[25,10],[25,110]], [[75,10],[25,66]], [[41,49],[78,110]]],
+  L: [[[28,10],[28,110]], [[28,110],[75,110]]],
+  M: [[[18,10],[18,110]], [[18,10],[50,80],[82,10]], [[82,10],[82,110]]],
+  N: [[[22,10],[22,110]], [[22,10],[78,110]], [[78,10],[78,110]]],
+  O: [arcPts(50,60,33,50,-90,-450)],
+  P: [[[25,10],[25,110]], [[25,10],[50,10]].concat(arcPts(50,37,27,27,-90,90), [[25,64]])],
+  Q: [arcPts(50,60,33,50,-90,-450), [[58,84],[82,114]]],
+  R: [[[25,10],[25,110]], [[25,10],[50,10]].concat(arcPts(50,37,27,27,-90,90), [[25,64]]), [[45,64],[78,110]]],
+  S: [arcPts(50,35,25,25,-30,-270).concat(arcPts(50,85,25,25,-90,150))],
+  T: [[[50,10],[50,110]], [[20,10],[80,10]]],
+  U: [[[22,10],[22,75]].concat(arcPts(50,75,28,35,180,0), [[78,10]])],
+  V: [[[20,10],[50,110],[80,10]]],
+  W: [[[12,10],[31,110],[50,30],[69,110],[88,10]]],
+  X: [[[22,10],[78,110]], [[78,10],[22,110]]],
+  Y: [[[20,10],[50,60]], [[80,10],[50,60],[50,110]]],
+  Z: [[[22,10],[78,10],[22,110],[78,110]]]
+};
+function resample(pts, step){   // evenly spaced waypoints along a stroke
+  var out = [pts[0].slice()], carry = 0;
+  for(var i=1;i<pts.length;i++){
+    var a = pts[i-1], b = pts[i], dx = b[0]-a[0], dy = b[1]-a[1], len = Math.sqrt(dx*dx + dy*dy), d = step - carry;
+    while(d <= len){ out.push([a[0] + dx*d/len, a[1] + dy*d/len]); d += step; }
+    carry = len - (d - step);
+  }
+  var last = pts[pts.length-1], e = out[out.length-1];
+  if(Math.abs(e[0]-last[0]) + Math.abs(e[1]-last[1]) > 0.5) out.push(last.slice());
+  return out;
+}
+function ptsAttr(pts){ return pts.map(function(p){ return p[0].toFixed(1) + "," + p[1].toFixed(1); }).join(" "); }
+var ti = 0, traceDemo = null;
+function trace(i){
+  ti = (i + 26) % 26;
+  mode = "trace"; homeBtn.hidden = false;
+  traceDemo = null;
+  var L = LETTERS[ti], strokes = STROKES[L[0]].map(function(st){ return resample(st, 4); });
+  var si = 0, prog = 0, won = false, TOL = 15;
+  bring(function(){
+    var base = strokes.map(function(st, k){ return '<polyline class="base" data-s="' + k + '" points="' + ptsAttr(st) + '"/>'; }).join("");
+    var inks = strokes.map(function(st, k){ return '<polyline class="ink" data-s="' + k + '" points=""/>'; }).join("");
+    stage.innerHTML = '<div class="wrap"><div class="lesson tr">' +
+      '<button class="nav" id="prevBtn" aria-label="Previous letter">' + ARROW_L + '</button>' +
+      '<div class="tracepad" id="pad" data-carry role="img" aria-label="Trace the letter ' + L[0] + '">' +
+        '<svg viewBox="0 0 100 120">' + base + inks +
+        '<polyline class="guide" points=""/><polygon class="arrow" points="0,-4.200 6,0 0,4.200"/>' +
+        '<circle class="ring" r="9.500"/><circle class="dot" r="9"/><circle class="demo" r="5"/></svg></div>' +
+      '<button class="nav" id="nextBtn" aria-label="Next letter">' + ARROW_R + '</button></div>' +
+      stripHTML(26, ti, function(k){ return LETTERS[k][0]; }, "Trace letter ") + '</div>';
+    wireStrip(function(k){ trace(k); });
+    $("#prevBtn").onclick = function(){ popSound(0); trace(ti - 1); };
+    $("#nextBtn").onclick = function(){ popSound(0); trace(ti + 1); };
+    preload(["ln_" + L[0], "lr_" + L[0]]);
+    var pad = $("#pad"), svg = pad.querySelector("svg");
+    var guide = svg.querySelector(".guide"), arrow = svg.querySelector(".arrow"), ring = svg.querySelector(".ring"), dot = svg.querySelector(".dot"), demo = svg.querySelector(".demo");
+    function draw(){
+      var st = strokes[si], p = st[prog];
+      svg.querySelectorAll(".base").forEach(function(b){ b.classList.toggle("now", +b.getAttribute("data-s") === si); });
+      svg.querySelectorAll(".ink").forEach(function(k){
+        var n = +k.getAttribute("data-s");
+        k.setAttribute("points", n < si ? ptsAttr(strokes[n]) : (n === si && prog > 0 ? ptsAttr(st.slice(0, prog + 1)) : ""));
+      });
+      guide.setAttribute("points", ptsAttr(st.slice(prog)));
+      var a = st[Math.min(prog + 2, st.length - 2)], b = st[Math.min(prog + 3, st.length - 1)];
+      arrow.setAttribute("transform", "translate(" + b[0].toFixed(1) + "," + b[1].toFixed(1) + ") rotate(" + (Math.atan2(b[1]-a[1], b[0]-a[0]) * 180 / Math.PI).toFixed(0) + ")");
+      [ring, dot].forEach(function(c){ c.setAttribute("cx", p[0]); c.setAttribute("cy", p[1]); });
+    }
+    function finish(){
+      won = true; clearTimers();
+      svg.querySelectorAll(".ink").forEach(function(k){ k.setAttribute("points", ptsAttr(strokes[+k.getAttribute("data-s")])); });
+      pad.classList.add("won");
+      celebrate();
+      var p = praiseIdx(), here = ti;
+      say(L[0] === "X" ? "X! Fox ends with X! " + PRAISE[p] : L[0] + "! " + L[0] + " is for " + L[1] + "! " + PRAISE[p], function(){
+        later(900, function(){ if(mode === "trace" && ti === here) trace(ti + 1); });
+      }, ["lr_" + L[0], "praise" + p]);
+    }
+    function at(e){
+      if(won) return;
+      var r = svg.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * 100, y = (e.clientY - r.top) / r.height * 120;
+      var st = strokes[si], moved = true, any = false;
+      while(moved && !won){
+        moved = false;
+        for(var k = Math.min(3, st.length - 1 - prog); k >= 1; k--){
+          var q = st[prog + k], dx = q[0] - x, dy = q[1] - y;
+          if(dx*dx + dy*dy < TOL*TOL){ prog += k; moved = true; any = true; break; }
+        }
+        if(prog >= st.length - 1){
+          popSound(si + 2);
+          var sr = stage.getBoundingClientRect(), end = st[st.length - 1];
+          miniBurst(r.left - sr.left + end[0] / 100 * r.width, r.top - sr.top + end[1] / 120 * r.height);
+          if(si === strokes.length - 1){ finish(); return; }
+          si++; prog = 0; st = strokes[si]; moved = false;
+        }
+      }
+      if(any){ if(prog % 2 === 0) tone(330 + prog * 14, 0, 0.07); nudges = 0; armNudge(); draw(); }
+    }
+    var down = false;
+    pad.addEventListener("pointerdown", function(e){ down = true; e.preventDefault(); try{ pad.setPointerCapture(e.pointerId); }catch(x){} at(e); });
+    pad.addEventListener("pointermove", function(e){ if(down || e.pointerType === "touch") at(e); });
+    ["pointerup","pointercancel","pointerleave"].forEach(function(ev){ pad.addEventListener(ev, function(){ down = false; }); });
+    pad.addEventListener("touchmove", function(e){ e.preventDefault(); }, { passive: false });
+    /* a white dot runs along the stroke to show the way */
+    traceDemo = function(){
+      if(won || STILL || !pad.isConnected) return;
+      var st = strokes[si].slice(prog), t0 = null, dur = Math.max(700, st.length * 55), my = scene;
+      (function frame(ts){
+        if(my !== scene || won){ demo.style.opacity = 0; return; }
+        if(t0 === null) t0 = ts;
+        var f = Math.max(0, Math.min(1, (ts - t0) / dur)), idx = f * (st.length - 1), i0 = Math.floor(idx), i1 = Math.min(st.length - 1, i0 + 1), u = idx - i0;
+        demo.setAttribute("cx", st[i0][0] + (st[i1][0] - st[i0][0]) * u);
+        demo.setAttribute("cy", st[i0][1] + (st[i1][1] - st[i0][1]) * u);
+        demo.style.opacity = f < 1 ? 0.95 : 0;
+        if(f < 1) requestAnimationFrame(frame);
+      })(performance.now());
+    };
+    draw();
+  }, function(){
+    if(!won){ prompt("Trace the big " + L[0] + "! Slide the dot along the dots.", ["trace", "ln_" + L[0]]); if(traceDemo) traceDemo(); }
+  });
+}
+
 var streak = 0, lastFind = -1;
 function findRound(){
   mode = "find"; homeBtn.hidden = false;
